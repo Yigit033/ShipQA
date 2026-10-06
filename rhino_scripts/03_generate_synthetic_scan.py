@@ -1,0 +1,364 @@
+# -*- coding: utf-8 -*-
+
+import Rhino
+import rhinoscriptsyntax as rs
+import scriptcontext as sc
+
+import random
+import math
+import bisect
+import hashlib
+import json
+import os
+
+
+# ============================================================
+# SETTINGS
+# ============================================================
+
+ASBUILT_LAYER = "05_ASBUILT_GEOMETRY"
+SCAN_LAYER = "10_SCAN"
+
+POINT_COUNT = 30000
+
+# Synthetic scanner noise
+# Standard deviation in millimetres
+NOISE_SIGMA_MM = 0.35
+
+RANDOM_SEED = 42
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+
+def ensure_layer(name):
+    if not rs.IsLayer(name):
+        rs.AddLayer(name)
+
+
+def point3d_from_vertex(v):
+    return Rhino.Geometry.Point3d(v.X, v.Y, v.Z)
+
+
+def triangle_area(a, b, c):
+
+    ab = b - a
+    ac = c - a
+
+    cross = Rhino.Geometry.Vector3d.CrossProduct(ab, ac)
+
+    return 0.5 * cross.Length
+
+
+def sample_point_on_triangle(a, b, c):
+
+    # Uniform area sampling
+    r1 = math.sqrt(random.random())
+    r2 = random.random()
+
+    wa = 1.0 - r1
+    wb = r1 * (1.0 - r2)
+    wc = r1 * r2
+
+    x = wa * a.X + wb * b.X + wc * c.X
+    y = wa * a.Y + wb * b.Y + wc * c.Y
+    z = wa * a.Z + wb * b.Z + wc * c.Z
+
+    return Rhino.Geometry.Point3d(x, y, z)
+
+
+# ============================================================
+# PREPARE
+# ============================================================
+
+def generate_synthetic_scan(asbuilt_ids=None, save_path=None, seed=RANDOM_SEED,
+                            display=True, overwrite=True):
+    random.seed(seed)
+
+    ensure_layer(SCAN_LAYER)
+
+    if asbuilt_ids is None:
+        asbuilt_ids = rs.ObjectsByLayer(ASBUILT_LAYER) or []
+
+    known_shift_mm = None
+
+    for obj_id in asbuilt_ids:
+        # Ground truth for reporting only; sampling uses the geometry below.
+        if rs.GetUserText(obj_id, "ASSEMBLY_ID") != "STF_03":
+            continue
+        shift_text = rs.GetUserText(obj_id, "KNOWN_SHIFT_Y_MM")
+
+        if shift_text:
+            try:
+                known_shift_mm = float(shift_text)
+                break
+            except:
+                pass
+
+    if not asbuilt_ids:
+
+        raise RuntimeError("No AS-BUILT geometry found.")
+
+    else:
+
+        print("Reading AS-BUILT geometry...")
+
+        triangles = []
+        cumulative_areas = []
+
+        total_area = 0.0
+
+        mesh_params = Rhino.Geometry.MeshingParameters.FastRenderMesh
+
+
+        # ========================================================
+        # CONVERT BREP GEOMETRY INTO TRIANGLES
+        # ========================================================
+
+        for obj_id in asbuilt_ids:
+
+            rhino_obj = sc.doc.Objects.Find(obj_id)
+
+            if rhino_obj is None:
+                raise RuntimeError("AS-BUILT object disappeared during sampling.")
+
+            geometry = rhino_obj.Geometry
+
+            meshes = []
+
+            if isinstance(geometry, Rhino.Geometry.Brep):
+
+                created_meshes = Rhino.Geometry.Mesh.CreateFromBrep(
+                    geometry,
+                    mesh_params
+                )
+
+                if created_meshes:
+                    meshes.extend(created_meshes)
+
+            elif isinstance(geometry, Rhino.Geometry.Mesh):
+
+                meshes.append(geometry)
+
+
+            if not meshes:
+                raise RuntimeError("Could not mesh an AS-BUILT object.")
+
+            for mesh in meshes:
+
+                for i in range(mesh.Faces.Count):
+
+                    face = mesh.Faces[i]
+
+                    # --------------------------------------------
+                    # TRIANGLE
+                    # --------------------------------------------
+
+                    if face.IsTriangle:
+
+                        a = point3d_from_vertex(mesh.Vertices[face.A])
+                        b = point3d_from_vertex(mesh.Vertices[face.B])
+                        c = point3d_from_vertex(mesh.Vertices[face.C])
+
+                        area = triangle_area(a, b, c)
+
+                        if area > 0.000001:
+
+                            total_area += area
+
+                            triangles.append((a, b, c))
+
+                            cumulative_areas.append(total_area)
+
+                    # --------------------------------------------
+                    # QUAD -> TWO TRIANGLES
+                    # --------------------------------------------
+
+                    else:
+
+                        a = point3d_from_vertex(mesh.Vertices[face.A])
+                        b = point3d_from_vertex(mesh.Vertices[face.B])
+                        c = point3d_from_vertex(mesh.Vertices[face.C])
+                        d = point3d_from_vertex(mesh.Vertices[face.D])
+
+                        tri1 = (a, b, c)
+                        tri2 = (a, c, d)
+
+                        for tri in [tri1, tri2]:
+
+                            area = triangle_area(
+                                tri[0],
+                                tri[1],
+                                tri[2]
+                            )
+
+                            if area > 0.000001:
+
+                                total_area += area
+
+                                triangles.append(tri)
+
+                                cumulative_areas.append(total_area)
+
+
+        print("Triangles prepared: {}".format(len(triangles)))
+        print("Surface area: {:.2f} mm2".format(total_area))
+
+
+        # ========================================================
+        # GENERATE SYNTHETIC SCAN
+        # ========================================================
+
+        if len(triangles) == 0:
+
+            raise RuntimeError("Could not generate triangles.")
+
+        else:
+
+            cloud = Rhino.Geometry.PointCloud()
+
+            scan_points = []
+
+            for i in range(POINT_COUNT):
+
+                target_area = random.random() * total_area
+
+                triangle_index = bisect.bisect_left(
+                    cumulative_areas,
+                    target_area
+                )
+
+                if triangle_index >= len(triangles):
+                    triangle_index = len(triangles) - 1
+
+                tri = triangles[triangle_index]
+
+                pt = sample_point_on_triangle(
+                    tri[0],
+                    tri[1],
+                    tri[2]
+                )
+
+                # -----------------------------------------------
+                # SIMULATED LASER SCANNER NOISE
+                # -----------------------------------------------
+
+                noisy_pt = Rhino.Geometry.Point3d(
+                    pt.X + random.gauss(0.0, NOISE_SIGMA_MM),
+                    pt.Y + random.gauss(0.0, NOISE_SIGMA_MM),
+                    pt.Z + random.gauss(0.0, NOISE_SIGMA_MM)
+                )
+
+                cloud.Add(noisy_pt)
+
+                scan_points.append(noisy_pt)
+
+
+            if display:
+                # Remove previous synthetic scan if script is rerun
+                old_scan_objects = rs.ObjectsByLayer(SCAN_LAYER)
+
+                if old_scan_objects:
+                    rs.DeleteObjects(old_scan_objects)
+
+
+                cloud_id = sc.doc.Objects.AddPointCloud(cloud)
+
+                rs.ObjectLayer(
+                    cloud_id,
+                    SCAN_LAYER
+                )
+
+                rs.ObjectName(
+                    cloud_id,
+                    "SYNTHETIC_SHIP_SCAN_V1"
+                )
+
+                rs.SetUserText(
+                    cloud_id,
+                    "POINT_COUNT",
+                    str(POINT_COUNT)
+                )
+
+                rs.SetUserText(
+                    cloud_id,
+                    "NOISE_SIGMA_MM",
+                    str(NOISE_SIGMA_MM)
+                )
+
+                rs.SetUserText(
+                    cloud_id,
+                    "SOURCE",
+                    "05_ASBUILT_GEOMETRY"
+                )
+
+                if known_shift_mm is not None:
+                    rs.SetUserText(
+                        cloud_id,
+                        "KNOWN_DEFECT",
+                        "STF_03 {:+.3f} mm Y SHIFT".format(known_shift_mm)
+                    )
+
+
+            # ====================================================
+            # EXPORT XYZ FILE
+            # ====================================================
+
+            if save_path is None:
+                save_path = rs.SaveFileName(
+                    "Save synthetic scan",
+                    "XYZ point cloud (*.xyz)|*.xyz||"
+                )
+
+            if save_path:
+
+                if not overwrite and os.path.exists(save_path):
+                    raise RuntimeError("Refusing to overwrite scan: {}".format(save_path))
+                output_file = open(save_path, "w")
+
+                for p in scan_points:
+
+                    output_file.write(
+                        "{:.4f} {:.4f} {:.4f}\n".format(
+                            p.X,
+                            p.Y,
+                            p.Z
+                        )
+                    )
+
+                output_file.close()
+
+                print("XYZ exported:")
+                print(save_path)
+
+
+            if display:
+                sc.doc.Views.Redraw()
+                rs.ZoomExtents()
+
+
+            print("--------------------------------------")
+            print("SYNTHETIC POINT CLOUD CREATED")
+            print("--------------------------------------")
+            print("Points: {}".format(POINT_COUNT))
+            print(
+                "Noise sigma: +/- {:.2f} mm".format(
+                    NOISE_SIGMA_MM
+                )
+            )
+            print("Known defect:")
+            if known_shift_mm is not None:
+                print("STF_03 = {:+.3f} mm transverse shift".format(known_shift_mm))
+            print("--------------------------------------")
+
+            triangle_coordinates = [[[p.X, p.Y, p.Z] for p in tri] for tri in triangles]
+            triangle_hash = hashlib.sha256(json.dumps(triangle_coordinates).encode("ascii")).hexdigest()
+            return {"point_count": len(scan_points), "noise_sigma_mm": NOISE_SIGMA_MM,
+                    "seed": seed, "triangle_count": len(triangles),
+                    "surface_area_mm2": total_area, "sampling_triangles_sha256": triangle_hash,
+                    "part_order": [rs.GetUserText(obj, "PART_ID") for obj in asbuilt_ids]}
+
+
+if __name__ == "__main__":
+    generate_synthetic_scan()

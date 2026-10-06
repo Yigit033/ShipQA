@@ -1,0 +1,110 @@
+# -*- coding: utf-8 -*-
+
+import rhinoscriptsyntax as rs
+
+
+ASBUILT_LAYER = "05_ASBUILT_GEOMETRY"
+KNOWN_SHIFT_MM = -8.0
+
+
+def ensure_layer(name):
+    if not rs.IsLayer(name):
+        rs.AddLayer(name)
+
+
+def build_asbuilt(shift_mm=KNOWN_SHIFT_MM, nominal_objects=None, zoom=True):
+    ensure_layer(ASBUILT_LAYER)
+
+    # Remove previous AS-BUILT test geometry
+    old_asbuilt_objects = rs.ObjectsByLayer(ASBUILT_LAYER)
+
+    if old_asbuilt_objects:
+        rs.DeleteObjects(old_asbuilt_objects)
+        if rs.ObjectsByLayer(ASBUILT_LAYER):
+            raise RuntimeError("Could not remove all previous AS-BUILT geometry.")
+    
+    
+    if nominal_objects is None:
+        nominal_objects = []
+        for layer_name in ["00_NOMINAL_PLATE", "01_NOMINAL_STIFFENERS"]:
+            nominal_objects.extend(rs.ObjectsByLayer(layer_name) or [])
+
+
+    if not nominal_objects:
+        raise RuntimeError("Nominal geometry not found.")
+
+    else:
+
+        created = []
+
+        for obj in nominal_objects:
+
+            part_id = rs.GetUserText(obj, "PART_ID")
+            assembly_id = rs.GetUserText(obj, "ASSEMBLY_ID")
+            original_name = rs.ObjectName(obj)
+
+            new_obj = rs.CopyObject(obj)
+
+            if not new_obj:
+                raise RuntimeError("Could not copy nominal part: {}".format(part_id))
+
+            rs.ObjectLayer(new_obj, ASBUILT_LAYER)
+
+            # As-built metadata
+            if part_id:
+                rs.SetUserText(new_obj, "PART_ID", part_id)
+
+            if assembly_id:
+                rs.SetUserText(new_obj, "ASSEMBLY_ID", assembly_id)
+
+            rs.SetUserText(new_obj, "MODEL_TYPE", "AS_BUILT")
+
+            if original_name:
+                rs.ObjectName(new_obj, original_name + " [AS-BUILT]")
+
+            # ------------------------------------------------
+            # CONTROLLED DEFECT
+            # Translate the complete STF_03 assembly by shift_mm in Y.
+            # ------------------------------------------------
+
+            if assembly_id == "STF_03":
+
+                # The zero-defect control is an unmodified nominal copy.
+                if shift_mm != 0.0:
+                    moved = rs.MoveObject(
+                        new_obj,
+                        (0.0, shift_mm, 0.0)
+                    )
+                    if not moved:
+                        raise RuntimeError("Could not move part: {}".format(part_id))
+
+                rs.SetUserText(
+                    new_obj,
+                    "KNOWN_DEFECT",
+                    "TRANSVERSE_SHIFT"
+                )
+
+                rs.SetUserText(
+                    new_obj,
+                    "KNOWN_SHIFT_Y_MM",
+                    str(shift_mm)
+                )
+
+            created.append(new_obj)
+
+
+        print("--------------------------------")
+        print("AS-BUILT TEST MODEL CREATED")
+        print("--------------------------------")
+        print("Objects created: {}".format(len(created)))
+        print("Controlled defect:")
+        print("STF_03 shifted {:+.3f} mm in Y".format(shift_mm))
+        print("--------------------------------")
+
+        if zoom:
+            rs.ZoomExtents()
+        return created
+
+
+if __name__ == "__main__":
+    build_asbuilt()
