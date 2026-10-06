@@ -1,5 +1,24 @@
 # ShipQA — Project Context
 
+## Current status update - multi-axis translation hardening
+
+The first implementation step for independent component X/Y/Z translation is
+ready for Rhino validation. New nominal OBJ exports preserve PART_ID identity with
+OBJ group records, allowing the external engine to isolate the detected
+component's nominal faces without receiving an expected axis or ground truth.
+
+The validated Y estimator and all existing detection settings remain unchanged.
+Historical ungrouped fixtures continue to produce their original Y result and
+explicitly mark XYZ pose as unavailable. A new sequential Rhino batch creates one
+zero control plus -16, -8, +8 and +16 mm cases independently on each axis. The
+external evaluator predicts every case before reading any ground truth and reports
+axis errors, vector errors and complete failure denominators.
+
+All 48 implementation and regression tests pass. The preserved STF_03 -8 mm Y
+result remains -8.126176 mm. The Rhino XYZ scans have not yet been generated, so
+no X/Z detection or accuracy result is claimed. See
+[MULTI_AXIS_TRANSLATION.md](MULTI_AXIS_TRANSLATION.md).
+
 ## Current status update - registration robustness and QA gating
 
 The next controlled registration milestone is complete. A focused matrix exercised
