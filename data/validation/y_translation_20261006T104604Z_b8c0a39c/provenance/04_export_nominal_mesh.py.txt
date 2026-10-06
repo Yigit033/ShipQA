@@ -1,0 +1,134 @@
+# -*- coding: utf-8 -*-
+
+import Rhino
+import rhinoscriptsyntax as rs
+import scriptcontext as sc
+
+
+NOMINAL_LAYERS = [
+    "00_NOMINAL_PLATE",
+    "01_NOMINAL_STIFFENERS"
+]
+
+
+# ------------------------------------------------------------
+# Collect nominal geometry
+# ------------------------------------------------------------
+
+def export_nominal_mesh(save_path=None):
+    object_ids = []
+
+    for layer_name in NOMINAL_LAYERS:
+        ids = rs.ObjectsByLayer(layer_name)
+        if ids:
+            object_ids.extend(ids)
+
+    if not object_ids:
+        raise RuntimeError("No nominal geometry found.")
+
+    else:
+
+        combined_mesh = Rhino.Geometry.Mesh()
+
+        mesh_params = Rhino.Geometry.MeshingParameters.QualityRenderMesh
+
+        for obj_id in object_ids:
+
+            rhino_obj = sc.doc.Objects.Find(obj_id)
+
+            if rhino_obj is None:
+                raise RuntimeError("Nominal object disappeared during export.")
+
+            geometry = rhino_obj.Geometry
+
+            if isinstance(geometry, Rhino.Geometry.Brep):
+
+                meshes = Rhino.Geometry.Mesh.CreateFromBrep(
+                    geometry,
+                    mesh_params
+                )
+
+                if meshes:
+                    for m in meshes:
+                        combined_mesh.Append(m)
+                else:
+                    raise RuntimeError("Could not mesh a nominal object.")
+
+            elif isinstance(geometry, Rhino.Geometry.Mesh):
+
+                combined_mesh.Append(geometry)
+            else:
+                raise RuntimeError("Unsupported nominal geometry type.")
+
+
+        # Important for simple OBJ export
+        combined_mesh.Faces.ConvertQuadsToTriangles()
+        combined_mesh.Compact()
+
+
+        print("Nominal CAD meshed.")
+        print("Vertices: {}".format(combined_mesh.Vertices.Count))
+        print("Triangles: {}".format(combined_mesh.Faces.Count))
+
+
+        # --------------------------------------------------------
+        # Select destination
+        # --------------------------------------------------------
+
+        if save_path is None:
+            save_path = rs.SaveFileName(
+                "Save nominal QA reference mesh",
+                "Wavefront OBJ (*.obj)|*.obj||"
+            )
+
+
+        if save_path:
+
+            if combined_mesh.Faces.Count == 0:
+                raise RuntimeError("Nominal reference has no mesh faces.")
+            f = open(save_path, "w")
+
+            f.write("# ShipQA nominal reference mesh\n")
+            f.write("# Units: millimetres\n")
+
+            # vertices
+            for i in range(combined_mesh.Vertices.Count):
+
+                v = combined_mesh.Vertices[i]
+
+                f.write(
+                    "v {:.6f} {:.6f} {:.6f}\n".format(
+                        v.X,
+                        v.Y,
+                        v.Z
+                    )
+                )
+
+
+            # triangle faces - OBJ uses 1-based indexing
+            for i in range(combined_mesh.Faces.Count):
+
+                face = combined_mesh.Faces[i]
+
+                if face.IsTriangle:
+
+                    f.write(
+                        "f {} {} {}\n".format(
+                            face.A + 1,
+                            face.B + 1,
+                            face.C + 1
+                        )
+                    )
+
+
+            f.close()
+
+            print("--------------------------------")
+            print("NOMINAL REFERENCE EXPORTED")
+            print("--------------------------------")
+            print(save_path)
+        return save_path
+
+
+if __name__ == "__main__":
+    export_nominal_mesh()

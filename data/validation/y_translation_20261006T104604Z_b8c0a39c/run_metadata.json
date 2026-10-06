@@ -1,0 +1,223 @@
+{
+  "cad_verification_tolerance_mm": 0.01, 
+  "case_ids": [
+    "case_001", 
+    "case_002", 
+    "case_003", 
+    "case_004", 
+    "case_005", 
+    "case_006", 
+    "case_007", 
+    "case_008", 
+    "case_009"
+  ], 
+  "completed_case_ids": [
+    "case_001", 
+    "case_002", 
+    "case_003", 
+    "case_004", 
+    "case_005", 
+    "case_006", 
+    "case_007", 
+    "case_008", 
+    "case_009"
+  ], 
+  "generation_status": "complete", 
+  "noise_sigma_mm": 0.34999999999999998, 
+  "nominal_parts_in_sampling_order": [
+    {
+      "assembly_id": null, 
+      "bbox_mm": [
+        [
+          0.0, 
+          0.0, 
+          0.0
+        ], 
+        [
+          4000.0, 
+          2400.0, 
+          12.0
+        ]
+      ], 
+      "part_id": "PLATE_001"
+    }, 
+    {
+      "assembly_id": "STF_05", 
+      "bbox_mm": [
+        [
+          0.0, 
+          1960.0, 
+          162.0
+        ], 
+        [
+          4000.0, 
+          2040.0, 
+          172.0
+        ]
+      ], 
+      "part_id": "STF_05_FLANGE"
+    }, 
+    {
+      "assembly_id": "STF_05", 
+      "bbox_mm": [
+        [
+          0.0, 
+          1996.0, 
+          12.0
+        ], 
+        [
+          4000.0, 
+          2004.0, 
+          162.0
+        ]
+      ], 
+      "part_id": "STF_05_WEB"
+    }, 
+    {
+      "assembly_id": "STF_04", 
+      "bbox_mm": [
+        [
+          0.0, 
+          1560.0, 
+          162.0
+        ], 
+        [
+          4000.0, 
+          1640.0, 
+          172.0
+        ]
+      ], 
+      "part_id": "STF_04_FLANGE"
+    }, 
+    {
+      "assembly_id": "STF_04", 
+      "bbox_mm": [
+        [
+          0.0, 
+          1596.0, 
+          12.0
+        ], 
+        [
+          4000.0, 
+          1604.0, 
+          162.0
+        ]
+      ], 
+      "part_id": "STF_04_WEB"
+    }, 
+    {
+      "assembly_id": "STF_03", 
+      "bbox_mm": [
+        [
+          0.0, 
+          1160.0, 
+          162.0
+        ], 
+        [
+          4000.0, 
+          1240.0, 
+          172.0
+        ]
+      ], 
+      "part_id": "STF_03_FLANGE"
+    }, 
+    {
+      "assembly_id": "STF_03", 
+      "bbox_mm": [
+        [
+          0.0, 
+          1196.0, 
+          12.0
+        ], 
+        [
+          4000.0, 
+          1204.0, 
+          162.0
+        ]
+      ], 
+      "part_id": "STF_03_WEB"
+    }, 
+    {
+      "assembly_id": "STF_02", 
+      "bbox_mm": [
+        [
+          0.0, 
+          760.0, 
+          162.0
+        ], 
+        [
+          4000.0, 
+          840.0, 
+          172.0
+        ]
+      ], 
+      "part_id": "STF_02_FLANGE"
+    }, 
+    {
+      "assembly_id": "STF_02", 
+      "bbox_mm": [
+        [
+          0.0, 
+          796.0, 
+          12.0
+        ], 
+        [
+          4000.0, 
+          804.0, 
+          162.0
+        ]
+      ], 
+      "part_id": "STF_02_WEB"
+    }, 
+    {
+      "assembly_id": "STF_01", 
+      "bbox_mm": [
+        [
+          0.0, 
+          360.0, 
+          162.0
+        ], 
+        [
+          4000.0, 
+          440.0, 
+          172.0
+        ]
+      ], 
+      "part_id": "STF_01_FLANGE"
+    }, 
+    {
+      "assembly_id": "STF_01", 
+      "bbox_mm": [
+        [
+          0.0, 
+          396.0, 
+          12.0
+        ], 
+        [
+          4000.0, 
+          404.0, 
+          162.0
+        ]
+      ], 
+      "part_id": "STF_01_WEB"
+    }
+  ], 
+  "point_count": 30000, 
+  "reference_sha256": {
+    "component_manifest.json": "6c6aaeb3f7501da56adde00d42750bfdadc2934656a3418c3188608fe38157d1", 
+    "nominal_reference.obj": "a5fa4168c22b106774426cb544eb4623c91ff68c34dd02b8f9c4933cdd05cf91"
+  }, 
+  "rhino_version": "7.1.20299.23101", 
+  "run_id": "y_translation_20261006T104604Z_b8c0a39c", 
+  "schema_version": 1, 
+  "seed": 42, 
+  "source_sha256": {
+    "01_build_nominal_panel.py": "c550fe5461b693ff74b80ce1f5579246340f906c43482e6b5362ccc0d2216e19", 
+    "02_build_asbuilt_test.py": "92401a197d79322c406aeebc5c68d3783d84b31b9cca31c35355196d99833b12", 
+    "03_generate_synthetic_scan.py": "7c78a4296bed58e55284f12e101d731cca21408d565887d088c1cf46a1e24f5b", 
+    "04_export_nominal_mesh.py": "3438b06b7ebc9bf1f538021e71712a8f0661bdf4169421a36820f73e81320cce", 
+    "05_export_component_manifest.py": "c547c31727f91bbf765f5c6c3ed764909dfe931f2fc84e067cebe63f92709544", 
+    "06_generate_y_validation_batch.py": "b10b0bf055e81a886699699ce2ee1af509c78a7c85860aabf9a00fa42a414997"
+  }, 
+  "units": "mm"
+}

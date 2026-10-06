@@ -1,0 +1,146 @@
+# -*- coding: utf-8 -*-
+
+import rhinoscriptsyntax as rs
+import json
+
+
+NOMINAL_LAYER = "01_NOMINAL_STIFFENERS"
+
+
+def get_bbox(objects):
+
+    all_points = []
+
+    for obj in objects:
+
+        bbox = rs.BoundingBox(obj)
+
+        if bbox:
+            all_points.extend(bbox)
+
+    if not all_points:
+        return None
+
+    min_x = min(p.X for p in all_points)
+    min_y = min(p.Y for p in all_points)
+    min_z = min(p.Z for p in all_points)
+
+    max_x = max(p.X for p in all_points)
+    max_y = max(p.Y for p in all_points)
+    max_z = max(p.Z for p in all_points)
+
+    return {
+        "min": [min_x, min_y, min_z],
+        "max": [max_x, max_y, max_z]
+    }
+
+
+def export_component_manifest(save_path=None):
+    objects = rs.ObjectsByLayer(NOMINAL_LAYER)
+
+    if not objects:
+
+        raise RuntimeError("No nominal stiffeners found.")
+
+    else:
+
+        assemblies = {}
+
+        for obj in objects:
+
+            assembly_id = rs.GetUserText(
+                obj,
+                "ASSEMBLY_ID"
+            )
+
+            part_id = rs.GetUserText(
+                obj,
+                "PART_ID"
+            )
+
+            if not assembly_id:
+                continue
+
+            if assembly_id not in assemblies:
+
+                assemblies[assembly_id] = {
+                    "objects": [],
+                    "part_ids": []
+                }
+
+            assemblies[assembly_id]["objects"].append(obj)
+
+            if part_id:
+                assemblies[assembly_id]["part_ids"].append(part_id)
+
+
+        manifest = {
+            "units": "mm",
+            "components": []
+        }
+
+
+        for assembly_id in sorted(assemblies.keys()):
+
+            data = assemblies[assembly_id]
+
+            bbox = get_bbox(
+                data["objects"]
+            )
+
+            if not bbox:
+                continue
+
+            center = [
+                (bbox["min"][0] + bbox["max"][0]) / 2.0,
+                (bbox["min"][1] + bbox["max"][1]) / 2.0,
+                (bbox["min"][2] + bbox["max"][2]) / 2.0
+            ]
+
+            component = {
+                "assembly_id": assembly_id,
+                "part_ids": data["part_ids"],
+                "bbox": bbox,
+                "nominal_center": center
+            }
+
+            manifest["components"].append(component)
+
+
+        if save_path is None:
+            save_path = rs.SaveFileName(
+                "Save component manifest",
+                "JSON (*.json)|*.json||"
+            )
+
+
+        if save_path:
+
+            with open(save_path, "w") as f:
+
+                json.dump(
+                    manifest,
+                    f,
+                    indent=2
+                )
+
+            print("--------------------------------")
+            print("COMPONENT MANIFEST EXPORTED")
+            print("--------------------------------")
+
+            for component in manifest["components"]:
+
+                print(
+                    "{} -> center Y = {:.3f} mm".format(
+                        component["assembly_id"],
+                        component["nominal_center"][1]
+                    )
+                )
+
+            print("--------------------------------")
+            print(save_path)
+        return save_path
+
+
+if __name__ == "__main__":
+    export_component_manifest()

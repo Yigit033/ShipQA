@@ -1,0 +1,81 @@
+
+========================================
+SHIPQA - DATA VALIDATION
+========================================
+Scan points       : 30,000
+Mesh vertices     : 88
+Mesh triangles    : 132
+
+SCAN BOUNDS [mm]
+Min XYZ: [-0.7995 -0.5856 -1.3038]
+Max XYZ: [4000.5602 2401.0769  173.1391]
+
+NOMINAL CAD BOUNDS [mm]
+Min XYZ: [0. 0. 0.]
+Max XYZ: [4000. 2400.  172.]
+
+Data loading completed successfully.
+========================================
+
+
+========================================
+SHIPQA - SURFACE DEVIATION
+========================================
+Minimum deviation : 0.000 mm
+Median deviation  : 0.244 mm
+Mean deviation    : 0.449 mm
+P95 deviation     : 0.786 mm
+P99 deviation     : 7.960 mm
+Maximum deviation : 8.898 mm
+
+THRESHOLD COUNTS
+>  1.0 mm :    918 points (  3.06%)
+>  2.0 mm :    726 points (  2.42%)
+>  5.0 mm :    627 points (  2.09%)
+> 10.0 mm :      0 points (  0.00%)
+========================================
+
+
+========================================
+SHIPQA - DEFECT LOCALIZATION
+========================================
+Threshold          : 5.0 mm
+Candidate points   : 627
+
+DEFECT REGION BOUNDS [mm]
+Min XYZ : [1.4200000e-01 1.1512656e+03 1.7104800e+01]
+Max XYZ : [4000.3537 1190.2205  172.3626]
+
+DEFECT REGION CENTER [mm]
+[2052.34323222 1184.23209043   95.38006874]
+
+WORST POINT
+XYZ      : [ 553.4092 1187.1017   43.8674]
+Deviation: 8.898 mm
+
+Defect candidates exported:
+C:\active_projects\ShipQA\data\defect_candidates.xyz
+========================================
+
+
+========================================
+SHIPQA - COMPONENT IDENTIFICATION
+========================================
+Defect center Y     : 1184.232 mm
+Detected component  : STF_03
+Nominal center Y    : 1200.000 mm
+Distance to nominal : 15.768 mm
+========================================
+
+
+========================================
+SHIPQA - COMPONENT SHIFT ESTIMATION
+========================================
+Component           : STF_03
+Points used         : 1,945
+Nominal center Y    : 1200.000 mm
+Observed Y envelope : 1152.388 -> 1231.359 mm
+Observed center Y   : 1191.874 mm
+Estimated Y shift   : -8.126 mm
+========================================
+

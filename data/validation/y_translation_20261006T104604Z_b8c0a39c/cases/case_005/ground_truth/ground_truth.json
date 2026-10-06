@@ -1,0 +1,29 @@
+{
+  "category": "zero_defect_control", 
+  "generation": {
+    "noise_sigma_mm": 0.34999999999999998, 
+    "part_order": [
+      "PLATE_001", 
+      "STF_05_FLANGE", 
+      "STF_05_WEB", 
+      "STF_04_FLANGE", 
+      "STF_04_WEB", 
+      "STF_03_FLANGE", 
+      "STF_03_WEB", 
+      "STF_02_FLANGE", 
+      "STF_02_WEB", 
+      "STF_01_FLANGE", 
+      "STF_01_WEB"
+    ], 
+    "point_count": 30000, 
+    "sampling_triangles_sha256": "884bfaf1b0595a39450c182663f29de3d81395b6218c460dea32d2b6ef8b931a", 
+    "seed": 42, 
+    "surface_area_mm2": 29293600.0, 
+    "triangle_count": 132
+  }, 
+  "injected_component": "STF_03", 
+  "injected_shift_y_mm": 0.0, 
+  "scan_sha256": "d1efde01e3eba7eb7f06f03d499f952bde694c850721efdb3e738fd4799136b0", 
+  "schema_version": 1, 
+  "units": "mm"
+}

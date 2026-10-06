@@ -1,0 +1,29 @@
+{
+  "category": "sub_threshold_characterization", 
+  "generation": {
+    "noise_sigma_mm": 0.34999999999999998, 
+    "part_order": [
+      "PLATE_001", 
+      "STF_05_FLANGE", 
+      "STF_05_WEB", 
+      "STF_04_FLANGE", 
+      "STF_04_WEB", 
+      "STF_03_FLANGE", 
+      "STF_03_WEB", 
+      "STF_02_FLANGE", 
+      "STF_02_WEB", 
+      "STF_01_FLANGE", 
+      "STF_01_WEB"
+    ], 
+    "point_count": 30000, 
+    "sampling_triangles_sha256": "30c4085c73b762a5fd71b21066e80c646e1ec65aeea76a432dfe5462b6d22899", 
+    "seed": 42, 
+    "surface_area_mm2": 29293600.0, 
+    "triangle_count": 132
+  }, 
+  "injected_component": "STF_03", 
+  "injected_shift_y_mm": -4.0, 
+  "scan_sha256": "bc2ca18a51854dd8f87da80792da84fc5842707f668c747f7ca91726619e3de8", 
+  "schema_version": 1, 
+  "units": "mm"
+}

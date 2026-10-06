@@ -1,0 +1,9 @@
+{
+  "detected_component": "STF_03",
+  "estimated_shift_y_mm": -8.126176000000214,
+  "observed_center_y_mm": 1191.8738239999998,
+  "points_used": 1945,
+  "candidate_count": 627,
+  "surface_p95_mm": 0.785778284072876,
+  "surface_p99_mm": 7.959969520568848
+}

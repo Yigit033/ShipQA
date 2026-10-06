@@ -1,0 +1,11 @@
+{
+  "baseline/analysis.log": "e2346ed0672873958af8e171553b13d65a144946a3bbf4ad7489b05b638b3e6f",
+  "baseline/defect_candidates.xyz": "8bc480acd183a9e76058454a5e7496e85a76a92aa911d294e59cc0d8b309c79c",
+  "baseline/result.json": "d7bcf460477695d41cd0d44c00124ab5df4d96c6530b9d6cc487b6f86922a279",
+  "input/scan.xyz": "fbc53abee6932e8235442491ce07dfe8547bb85df19bcd8cf01c35113e60c9f5",
+  "provenance/02_before.py.txt": "80487d2819deea225f63e2edd9d8fc13c4f2a49ad94f375e308b1af74df5ad1c",
+  "provenance/03_before.py.txt": "37b18ea84b5fd084b5a9e3b71f68d4a0bf93bea0fbee33ebe44533cbd05c07d7",
+  "provenance/qa_engine_before.py.txt": "be13341e6525acd667c1b7047560b05d4cea9e1e418246807092fd074fb5cd26",
+  "reference/component_manifest.json": "6c6aaeb3f7501da56adde00d42750bfdadc2934656a3418c3188608fe38157d1",
+  "reference/nominal_reference.obj": "a5fa4168c22b106774426cb544eb4623c91ff68c34dd02b8f9c4933cdd05cf91"
+}

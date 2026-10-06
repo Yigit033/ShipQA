@@ -1,0 +1,342 @@
+import json
+from pathlib import Path
+
+import numpy as np
+import open3d as o3d
+
+
+# ---------------------------------------------------------
+# PATHS
+# ---------------------------------------------------------
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+SCAN_PATH = DATA_DIR / "synthetic_scan_v1.xyz"
+MESH_PATH = DATA_DIR / "nominal_reference.obj"
+MANIFEST_PATH = DATA_DIR / "component_manifest.json"
+
+# ---------------------------------------------------------
+# CHECK FILES
+# ---------------------------------------------------------
+
+if not SCAN_PATH.exists():
+    raise FileNotFoundError(f"Scan not found: {SCAN_PATH}")
+
+if not MESH_PATH.exists():
+    raise FileNotFoundError(f"Nominal mesh not found: {MESH_PATH}")
+
+
+# ---------------------------------------------------------
+# LOAD SYNTHETIC SCAN
+# ---------------------------------------------------------
+
+scan_points = np.loadtxt(SCAN_PATH, dtype=np.float64)
+
+if scan_points.ndim != 2 or scan_points.shape[1] != 3:
+    raise ValueError(
+        f"Expected XYZ scan with shape (N, 3), got {scan_points.shape}"
+    )
+
+
+# ---------------------------------------------------------
+# LOAD NOMINAL CAD MESH
+# ---------------------------------------------------------
+
+nominal_mesh = o3d.io.read_triangle_mesh(str(MESH_PATH))
+
+if nominal_mesh.is_empty():
+    raise RuntimeError("Nominal mesh could not be loaded.")
+
+vertices = np.asarray(nominal_mesh.vertices)
+triangles = np.asarray(nominal_mesh.triangles)
+
+
+# ---------------------------------------------------------
+# BASIC QA
+# ---------------------------------------------------------
+
+scan_min = scan_points.min(axis=0)
+scan_max = scan_points.max(axis=0)
+
+mesh_min = vertices.min(axis=0)
+mesh_max = vertices.max(axis=0)
+
+
+print("\n========================================")
+print("SHIPQA - DATA VALIDATION")
+print("========================================")
+
+print(f"Scan points       : {len(scan_points):,}")
+print(f"Mesh vertices     : {len(vertices):,}")
+print(f"Mesh triangles    : {len(triangles):,}")
+
+print("\nSCAN BOUNDS [mm]")
+print(f"Min XYZ: {scan_min}")
+print(f"Max XYZ: {scan_max}")
+
+print("\nNOMINAL CAD BOUNDS [mm]")
+print(f"Min XYZ: {mesh_min}")
+print(f"Max XYZ: {mesh_max}")
+
+print("\nData loading completed successfully.")
+print("========================================\n")
+
+# ---------------------------------------------------------
+# POINT-TO-MESH SURFACE DEVIATION
+# ---------------------------------------------------------
+
+# Legacy Open3D mesh -> Tensor mesh
+tensor_mesh = o3d.t.geometry.TriangleMesh.from_legacy(nominal_mesh)
+
+# Raycasting scene lets us query distance to triangle surfaces
+scene = o3d.t.geometry.RaycastingScene()
+scene.add_triangles(tensor_mesh)
+
+# Scan points -> Open3D tensor
+query_points = o3d.core.Tensor(
+    scan_points.astype(np.float32),
+    dtype=o3d.core.Dtype.Float32
+)
+
+# Unsigned distance from each scan point to nominal CAD surface
+distances = scene.compute_distance(query_points).numpy()
+
+
+# ---------------------------------------------------------
+# BASIC DEVIATION STATISTICS
+# ---------------------------------------------------------
+
+print("\n========================================")
+print("SHIPQA - SURFACE DEVIATION")
+print("========================================")
+
+print(f"Minimum deviation : {distances.min():.3f} mm")
+print(f"Median deviation  : {np.median(distances):.3f} mm")
+print(f"Mean deviation    : {distances.mean():.3f} mm")
+
+print(f"P95 deviation     : {np.percentile(distances, 95):.3f} mm")
+print(f"P99 deviation     : {np.percentile(distances, 99):.3f} mm")
+
+print(f"Maximum deviation : {distances.max():.3f} mm")
+
+print("\nTHRESHOLD COUNTS")
+
+for threshold in [1.0, 2.0, 5.0, 10.0]:
+    count = np.sum(distances > threshold)
+    percentage = (count / len(distances)) * 100.0
+
+    print(
+        f"> {threshold:4.1f} mm : "
+        f"{count:6,d} points "
+        f"({percentage:6.2f}%)"
+    )
+
+print("========================================\n")
+
+# ---------------------------------------------------------
+# LOCALIZE LARGE DEVIATIONS
+# ---------------------------------------------------------
+
+DEFECT_THRESHOLD_MM = 5.0
+
+defect_mask = distances > DEFECT_THRESHOLD_MM
+defect_points = scan_points[defect_mask]
+defect_distances = distances[defect_mask]
+
+print("\n========================================")
+print("SHIPQA - DEFECT LOCALIZATION")
+print("========================================")
+
+print(f"Threshold          : {DEFECT_THRESHOLD_MM:.1f} mm")
+print(f"Candidate points   : {len(defect_points):,}")
+
+if len(defect_points) > 0:
+
+    defect_min = defect_points.min(axis=0)
+    defect_max = defect_points.max(axis=0)
+    defect_center = defect_points.mean(axis=0)
+
+    worst_index = np.argmax(defect_distances)
+
+    worst_point = defect_points[worst_index]
+    worst_distance = defect_distances[worst_index]
+
+    print("\nDEFECT REGION BOUNDS [mm]")
+    print(f"Min XYZ : {defect_min}")
+    print(f"Max XYZ : {defect_max}")
+
+    print("\nDEFECT REGION CENTER [mm]")
+    print(defect_center)
+
+    print("\nWORST POINT")
+    print(f"XYZ      : {worst_point}")
+    print(f"Deviation: {worst_distance:.3f} mm")
+
+    # Export candidates so we can inspect them in Rhino later
+    defect_output = DATA_DIR / "defect_candidates.xyz"
+
+    np.savetxt(
+        defect_output,
+        defect_points,
+        fmt="%.4f"
+    )
+
+    print(f"\nDefect candidates exported:")
+    print(defect_output)
+
+print("========================================\n")
+
+# ---------------------------------------------------------
+# MAP DEFECT REGION TO ENGINEERING COMPONENT
+# ---------------------------------------------------------
+
+if not MANIFEST_PATH.exists():
+    raise FileNotFoundError(
+        f"Component manifest not found: {MANIFEST_PATH}"
+    )
+
+with open(MANIFEST_PATH, "r") as f:
+    manifest = json.load(f)
+
+components = manifest["components"]
+
+if len(defect_points) == 0:
+    raise RuntimeError(
+        "No defect candidates exceed the threshold; "
+        "component identification and shift estimation cannot proceed."
+    )
+
+defect_center_y = defect_points[:, 1].mean()
+
+closest_component = None
+closest_distance = None
+
+for component in components:
+
+    nominal_y = component["nominal_center"][1]
+
+    distance_y = abs(defect_center_y - nominal_y)
+
+    if closest_distance is None or distance_y < closest_distance:
+
+        closest_distance = distance_y
+        closest_component = component
+
+
+print("\n========================================")
+print("SHIPQA - COMPONENT IDENTIFICATION")
+print("========================================")
+
+print(f"Defect center Y     : {defect_center_y:.3f} mm")
+
+if closest_component:
+
+    assembly_id = closest_component["assembly_id"]
+    nominal_y = closest_component["nominal_center"][1]
+
+    print(f"Detected component  : {assembly_id}")
+    print(f"Nominal center Y    : {nominal_y:.3f} mm")
+    print(
+        f"Distance to nominal : "
+        f"{abs(defect_center_y - nominal_y):.3f} mm"
+    )
+
+print("========================================\n")
+
+# ---------------------------------------------------------
+# ESTIMATE COMPONENT TRANSVERSE SHIFT
+# ---------------------------------------------------------
+
+if closest_component:
+
+    bbox_min = np.array(
+        closest_component["bbox"]["min"],
+        dtype=np.float64
+    )
+
+    bbox_max = np.array(
+        closest_component["bbox"]["max"],
+        dtype=np.float64
+    )
+
+    nominal_center_y = float(
+        closest_component["nominal_center"][1]
+    )
+
+    # Expand nominal component region so a shifted
+    # component is still captured.
+    X_MARGIN = 2.0
+    Y_MARGIN = 50.0
+    Z_MARGIN = 2.0
+
+    # Ignore points very close to the base plate.
+    # The stiffener starts at approximately Z = 12 mm.
+    MIN_COMPONENT_Z = bbox_min[2] + 5.0
+
+    component_mask = (
+        (scan_points[:, 0] >= bbox_min[0] - X_MARGIN) &
+        (scan_points[:, 0] <= bbox_max[0] + X_MARGIN) &
+
+        (scan_points[:, 1] >= bbox_min[1] - Y_MARGIN) &
+        (scan_points[:, 1] <= bbox_max[1] + Y_MARGIN) &
+
+        (scan_points[:, 2] >= MIN_COMPONENT_Z) &
+        (scan_points[:, 2] <= bbox_max[2] + Z_MARGIN)
+    )
+
+    component_points = scan_points[component_mask]
+
+    print("\n========================================")
+    print("SHIPQA - COMPONENT SHIFT ESTIMATION")
+    print("========================================")
+
+    print(
+        f"Component           : "
+        f"{closest_component['assembly_id']}"
+    )
+
+    print(
+        f"Points used         : "
+        f"{len(component_points):,}"
+    )
+
+    if len(component_points) > 0:
+
+        y_values = component_points[:, 1]
+
+        # Robust estimates of the two transverse edges.
+        # Avoid using absolute min/max because scanner noise
+        # can produce outliers.
+        y_low = np.percentile(y_values, 2)
+        y_high = np.percentile(y_values, 98)
+
+        observed_center_y = (
+            y_low + y_high
+        ) / 2.0
+
+        estimated_shift_y = (
+            observed_center_y - nominal_center_y
+        )
+
+        print(
+            f"Nominal center Y    : "
+            f"{nominal_center_y:.3f} mm"
+        )
+
+        print(
+            f"Observed Y envelope : "
+            f"{y_low:.3f} -> {y_high:.3f} mm"
+        )
+
+        print(
+            f"Observed center Y   : "
+            f"{observed_center_y:.3f} mm"
+        )
+
+        print(
+            f"Estimated Y shift   : "
+            f"{estimated_shift_y:+.3f} mm"
+        )
+
+    print("========================================\n")

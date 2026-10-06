@@ -1,0 +1,125 @@
+{
+  "components": [
+    {
+      "part_ids": [
+        "STF_01_FLANGE", 
+        "STF_01_WEB"
+      ], 
+      "nominal_center": [
+        2000.0, 
+        400.0, 
+        92.0
+      ], 
+      "assembly_id": "STF_01", 
+      "bbox": {
+        "min": [
+          0.0, 
+          360.0, 
+          12.0
+        ], 
+        "max": [
+          4000.0, 
+          440.0, 
+          172.0
+        ]
+      }
+    }, 
+    {
+      "part_ids": [
+        "STF_02_FLANGE", 
+        "STF_02_WEB"
+      ], 
+      "nominal_center": [
+        2000.0, 
+        800.0, 
+        92.0
+      ], 
+      "assembly_id": "STF_02", 
+      "bbox": {
+        "min": [
+          0.0, 
+          760.0, 
+          12.0
+        ], 
+        "max": [
+          4000.0, 
+          840.0, 
+          172.0
+        ]
+      }
+    }, 
+    {
+      "part_ids": [
+        "STF_03_FLANGE", 
+        "STF_03_WEB"
+      ], 
+      "nominal_center": [
+        2000.0, 
+        1200.0, 
+        92.0
+      ], 
+      "assembly_id": "STF_03", 
+      "bbox": {
+        "min": [
+          0.0, 
+          1160.0, 
+          12.0
+        ], 
+        "max": [
+          4000.0, 
+          1240.0, 
+          172.0
+        ]
+      }
+    }, 
+    {
+      "part_ids": [
+        "STF_04_FLANGE", 
+        "STF_04_WEB"
+      ], 
+      "nominal_center": [
+        2000.0, 
+        1600.0, 
+        92.0
+      ], 
+      "assembly_id": "STF_04", 
+      "bbox": {
+        "min": [
+          0.0, 
+          1560.0, 
+          12.0
+        ], 
+        "max": [
+          4000.0, 
+          1640.0, 
+          172.0
+        ]
+      }
+    }, 
+    {
+      "part_ids": [
+        "STF_05_FLANGE", 
+        "STF_05_WEB"
+      ], 
+      "nominal_center": [
+        2000.0, 
+        2000.0, 
+        92.0
+      ], 
+      "assembly_id": "STF_05", 
+      "bbox": {
+        "min": [
+          0.0, 
+          1960.0, 
+          12.0
+        ], 
+        "max": [
+          4000.0, 
+          2040.0, 
+          172.0
+        ]
+      }
+    }
+  ], 
+  "units": "mm"
+}

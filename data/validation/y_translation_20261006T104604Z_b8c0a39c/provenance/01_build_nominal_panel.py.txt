@@ -1,0 +1,131 @@
+# -*- coding: utf-8 -*-
+
+import rhinoscriptsyntax as rs
+
+
+def ensure_layer(name):
+    if not rs.IsLayer(name):
+        rs.AddLayer(name)
+
+
+def add_box(x0, y0, z0, x1, y1, z1, layer, name, part_id, assembly_id=None):
+
+    pts = [
+        (x0, y0, z0),
+        (x1, y0, z0),
+        (x1, y1, z0),
+        (x0, y1, z0),
+
+        (x0, y0, z1),
+        (x1, y0, z1),
+        (x1, y1, z1),
+        (x0, y1, z1)
+    ]
+
+    obj = rs.AddBox(pts)
+
+    if obj:
+        rs.ObjectLayer(obj, layer)
+        rs.ObjectName(obj, name)
+
+        rs.SetUserText(obj, "PART_ID", part_id)
+
+        if assembly_id:
+            rs.SetUserText(obj, "ASSEMBLY_ID", assembly_id)
+
+    return obj
+
+
+# --------------------------------------------------
+# PROJECT PARAMETERS - millimetres
+# --------------------------------------------------
+
+PANEL_LENGTH = 4000.0
+PANEL_WIDTH = 2400.0
+PLATE_THICKNESS = 12.0
+
+WEB_HEIGHT = 150.0
+WEB_THICKNESS = 8.0
+
+FLANGE_WIDTH = 80.0
+FLANGE_THICKNESS = 10.0
+
+STIFFENER_POSITIONS = [
+    400.0,
+    800.0,
+    1200.0,
+    1600.0,
+    2000.0
+]
+
+
+# --------------------------------------------------
+# LAYERS
+# --------------------------------------------------
+
+ensure_layer("00_NOMINAL_PLATE")
+ensure_layer("01_NOMINAL_STIFFENERS")
+ensure_layer("10_SCAN")
+ensure_layer("20_QA_RESULTS")
+
+
+# --------------------------------------------------
+# BASE PLATE
+# --------------------------------------------------
+
+plate = add_box(
+    0,
+    0,
+    0,
+    PANEL_LENGTH,
+    PANEL_WIDTH,
+    PLATE_THICKNESS,
+    "00_NOMINAL_PLATE",
+    "Main Plate",
+    "PLATE_001"
+)
+
+
+# --------------------------------------------------
+# LONGITUDINAL T-STIFFENERS
+# --------------------------------------------------
+
+for i, y_center in enumerate(STIFFENER_POSITIONS):
+
+    number = i + 1
+    assembly_id = "STF_{:02d}".format(number)
+
+    # Web
+    add_box(
+        0,
+        y_center - WEB_THICKNESS / 2.0,
+        PLATE_THICKNESS,
+        PANEL_LENGTH,
+        y_center + WEB_THICKNESS / 2.0,
+        PLATE_THICKNESS + WEB_HEIGHT,
+        "01_NOMINAL_STIFFENERS",
+        "{} Web".format(assembly_id),
+        "{}_WEB".format(assembly_id),
+        assembly_id
+    )
+
+    # Flange
+    add_box(
+        0,
+        y_center - FLANGE_WIDTH / 2.0,
+        PLATE_THICKNESS + WEB_HEIGHT,
+        PANEL_LENGTH,
+        y_center + FLANGE_WIDTH / 2.0,
+        PLATE_THICKNESS + WEB_HEIGHT + FLANGE_THICKNESS,
+        "01_NOMINAL_STIFFENERS",
+        "{} Flange".format(assembly_id),
+        "{}_FLANGE".format(assembly_id),
+        assembly_id
+    )
+
+
+rs.ZoomExtents()
+
+print("ShipQA nominal panel created.")
+print("Panel: 4000 x 2400 x 12 mm")
+print("Stiffeners: 5 T-stiffeners")

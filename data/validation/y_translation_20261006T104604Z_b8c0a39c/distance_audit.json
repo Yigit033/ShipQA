@@ -1,0 +1,188 @@
+{
+  "purpose": "Post-prediction diagnostic only; recorded engine results are unchanged.",
+  "units": "mm",
+  "reference_assumption": "Nominal model consists of the 11 axis-aligned solid boxes documented in run metadata.",
+  "cases": [
+    {
+      "case_id": "case_001",
+      "engine_candidate_count": 1252,
+      "analytic_box_candidate_count": 1252,
+      "engine_max_point_xyz_mm": [
+        3363.8381,
+        1142.9861,
+        166.4309
+      ],
+      "engine_distance_at_point_mm": 17.01817512512207,
+      "analytic_distance_at_point_mm": 17.01389999999992,
+      "analytic_max_distance_mm": 17.01389999999992,
+      "absolute_distance_discrepancy_p99_mm": 0.019679732631996908,
+      "absolute_distance_discrepancy_max_mm": 2.4057740318298784
+    },
+    {
+      "case_id": "case_002",
+      "engine_candidate_count": 673,
+      "analytic_box_candidate_count": 673,
+      "engine_max_point_xyz_mm": [
+        3363.8381,
+        1146.9861,
+        166.4309
+      ],
+      "engine_distance_at_point_mm": 13.019484519958496,
+      "analytic_distance_at_point_mm": 13.013899999999921,
+      "analytic_max_distance_mm": 13.013899999999921,
+      "absolute_distance_discrepancy_p99_mm": 0.02085746047710815,
+      "absolute_distance_discrepancy_max_mm": 2.4057740318298784
+    },
+    {
+      "case_id": "case_003",
+      "engine_candidate_count": 633,
+      "analytic_box_candidate_count": 633,
+      "engine_max_point_xyz_mm": [
+        3363.8381,
+        1150.9861,
+        166.4309
+      ],
+      "engine_distance_at_point_mm": 9.021953582763672,
+      "analytic_distance_at_point_mm": 9.013899999999921,
+      "analytic_max_distance_mm": 9.013899999999921,
+      "absolute_distance_discrepancy_p99_mm": 0.020244200253667827,
+      "absolute_distance_discrepancy_max_mm": 2.4057740318298784
+    },
+    {
+      "case_id": "case_004",
+      "engine_candidate_count": 1,
+      "analytic_box_candidate_count": 1,
+      "engine_max_point_xyz_mm": [
+        3363.8381,
+        1154.9861,
+        166.4309
+      ],
+      "engine_distance_at_point_mm": 5.028352737426758,
+      "analytic_distance_at_point_mm": 5.013899999999921,
+      "analytic_max_distance_mm": 5.013899999999921,
+      "absolute_distance_discrepancy_p99_mm": 0.02085905660807502,
+      "absolute_distance_discrepancy_max_mm": 2.4057740318298784
+    },
+    {
+      "case_id": "case_005",
+      "engine_candidate_count": 0,
+      "analytic_box_candidate_count": 0,
+      "engine_max_point_xyz_mm": [
+        1364.6434,
+        1240.4315,
+        168.5501
+      ],
+      "engine_distance_at_point_mm": 3.1680092811584473,
+      "analytic_distance_at_point_mm": 0.4314999999999145,
+      "analytic_max_distance_mm": 1.4030000000000005,
+      "absolute_distance_discrepancy_p99_mm": 0.026788798238280117,
+      "absolute_distance_discrepancy_max_mm": 2.987633651351871
+    },
+    {
+      "case_id": "case_006",
+      "engine_candidate_count": 3,
+      "analytic_box_candidate_count": 1,
+      "engine_max_point_xyz_mm": [
+        1364.6434,
+        1244.4315,
+        168.5501
+      ],
+      "engine_distance_at_point_mm": 5.430325031280518,
+      "analytic_distance_at_point_mm": 4.4314999999999145,
+      "analytic_max_distance_mm": 5.010199999999941,
+      "absolute_distance_discrepancy_p99_mm": 0.02199304817032783,
+      "absolute_distance_discrepancy_max_mm": 2.4057740318298784
+    },
+    {
+      "case_id": "case_007",
+      "engine_candidate_count": 609,
+      "analytic_box_candidate_count": 609,
+      "engine_max_point_xyz_mm": [
+        1211.5976,
+        1213.0102,
+        72.1855
+      ],
+      "engine_distance_at_point_mm": 9.01025676727295,
+      "analytic_distance_at_point_mm": 9.01019999999994,
+      "analytic_max_distance_mm": 9.01019999999994,
+      "absolute_distance_discrepancy_p99_mm": 0.020914488447358926,
+      "absolute_distance_discrepancy_max_mm": 2.4057740318298784
+    },
+    {
+      "case_id": "case_008",
+      "engine_candidate_count": 643,
+      "analytic_box_candidate_count": 643,
+      "engine_max_point_xyz_mm": [
+        1211.5976,
+        1217.0102,
+        72.1855
+      ],
+      "engine_distance_at_point_mm": 13.01025676727295,
+      "analytic_distance_at_point_mm": 13.01019999999994,
+      "analytic_max_distance_mm": 13.01019999999994,
+      "absolute_distance_discrepancy_p99_mm": 0.020303653260501715,
+      "absolute_distance_discrepancy_max_mm": 2.4057740318298784
+    },
+    {
+      "case_id": "case_009",
+      "engine_candidate_count": 1252,
+      "analytic_box_candidate_count": 1252,
+      "engine_max_point_xyz_mm": [
+        1211.5976,
+        1221.0102,
+        72.1855
+      ],
+      "engine_distance_at_point_mm": 17.010255813598633,
+      "analytic_distance_at_point_mm": 17.01019999999994,
+      "analytic_max_distance_mm": 17.01019999999994,
+      "absolute_distance_discrepancy_p99_mm": 0.019622286397781092,
+      "absolute_distance_discrepancy_max_mm": 2.4057740318298784
+    }
+  ],
+  "zero_control_triangle_confirmation": {
+    "scan_point_mm": [
+      1364.6434,
+      1240.4315,
+      168.5501
+    ],
+    "verified_point_on_obj_triangle_mm": [
+      1364.6434,
+      1240.0,
+      168.5501
+    ],
+    "distance_to_verified_triangle_point_mm": 0.4314999999999145,
+    "containing_triangles": [
+      {
+        "triangle_index": 98,
+        "vertices_mm": [
+          [
+            4000.0,
+            1240.0,
+            172.0
+          ],
+          [
+            0.0,
+            1240.0,
+            162.0
+          ],
+          [
+            0.0,
+            1240.0,
+            172.0
+          ]
+        ],
+        "barycentric_weights": [
+          0.34116084999999996,
+          0.34499000000000135,
+          0.3138491499999987
+        ]
+      }
+    ],
+    "open3d_closest_point_mm": [
+      1364.651123046875,
+      1240.0,
+      165.41162109375
+    ],
+    "open3d_triangle_index": 32
+  }
+}

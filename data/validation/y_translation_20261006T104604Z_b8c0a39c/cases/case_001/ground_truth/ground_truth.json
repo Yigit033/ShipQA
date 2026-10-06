@@ -1,0 +1,29 @@
+{
+  "category": "detectable_translation", 
+  "generation": {
+    "noise_sigma_mm": 0.34999999999999998, 
+    "part_order": [
+      "PLATE_001", 
+      "STF_05_FLANGE", 
+      "STF_05_WEB", 
+      "STF_04_FLANGE", 
+      "STF_04_WEB", 
+      "STF_03_FLANGE", 
+      "STF_03_WEB", 
+      "STF_02_FLANGE", 
+      "STF_02_WEB", 
+      "STF_01_FLANGE", 
+      "STF_01_WEB"
+    ], 
+    "point_count": 30000, 
+    "sampling_triangles_sha256": "1eed7bda3792b7fd038231ccc6531cd8eb4fda7a0bb80cd10f60975708296552", 
+    "seed": 42, 
+    "surface_area_mm2": 29293600.0, 
+    "triangle_count": 132
+  }, 
+  "injected_component": "STF_03", 
+  "injected_shift_y_mm": -16.0, 
+  "scan_sha256": "cef9c2f3f1dcb8d7ee7e52d2147a10db6980d16f056c142cc8274b5ee68ef700", 
+  "schema_version": 1, 
+  "units": "mm"
+}
