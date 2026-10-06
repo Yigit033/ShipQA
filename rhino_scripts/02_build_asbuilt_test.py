@@ -12,7 +12,13 @@ def ensure_layer(name):
         rs.AddLayer(name)
 
 
-def build_asbuilt(shift_mm=KNOWN_SHIFT_MM, nominal_objects=None, zoom=True):
+def build_asbuilt(shift_mm=KNOWN_SHIFT_MM, nominal_objects=None, zoom=True,
+                  shift_xyz_mm=None, target_assembly="STF_03"):
+    if shift_xyz_mm is None:
+        shift_xyz_mm = (0.0, float(shift_mm), 0.0)
+    if len(shift_xyz_mm) != 3:
+        raise ValueError("shift_xyz_mm must contain X, Y and Z in millimetres.")
+    shift_xyz_mm = tuple(float(value) for value in shift_xyz_mm)
     ensure_layer(ASBUILT_LAYER)
 
     # Remove previous AS-BUILT test geometry
@@ -67,13 +73,13 @@ def build_asbuilt(shift_mm=KNOWN_SHIFT_MM, nominal_objects=None, zoom=True):
             # Translate the complete STF_03 assembly by shift_mm in Y.
             # ------------------------------------------------
 
-            if assembly_id == "STF_03":
+            if assembly_id == target_assembly:
 
                 # The zero-defect control is an unmodified nominal copy.
-                if shift_mm != 0.0:
+                if any(value != 0.0 for value in shift_xyz_mm):
                     moved = rs.MoveObject(
                         new_obj,
-                        (0.0, shift_mm, 0.0)
+                        shift_xyz_mm
                     )
                     if not moved:
                         raise RuntimeError("Could not move part: {}".format(part_id))
@@ -87,8 +93,11 @@ def build_asbuilt(shift_mm=KNOWN_SHIFT_MM, nominal_objects=None, zoom=True):
                 rs.SetUserText(
                     new_obj,
                     "KNOWN_SHIFT_Y_MM",
-                    str(shift_mm)
+                    str(shift_xyz_mm[1])
                 )
+
+                rs.SetUserText(new_obj, "KNOWN_SHIFT_X_MM", str(shift_xyz_mm[0]))
+                rs.SetUserText(new_obj, "KNOWN_SHIFT_Z_MM", str(shift_xyz_mm[2]))
 
             created.append(new_obj)
 
@@ -98,7 +107,8 @@ def build_asbuilt(shift_mm=KNOWN_SHIFT_MM, nominal_objects=None, zoom=True):
         print("--------------------------------")
         print("Objects created: {}".format(len(created)))
         print("Controlled defect:")
-        print("STF_03 shifted {:+.3f} mm in Y".format(shift_mm))
+        print("{} shifted X={:+.3f}, Y={:+.3f}, Z={:+.3f} mm".format(
+            target_assembly, shift_xyz_mm[0], shift_xyz_mm[1], shift_xyz_mm[2]))
         print("--------------------------------")
 
         if zoom:

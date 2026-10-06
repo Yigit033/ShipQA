@@ -28,10 +28,11 @@ def export_nominal_mesh(save_path=None):
 
     else:
 
-        combined_mesh = Rhino.Geometry.Mesh()
-
         mesh_params = Rhino.Geometry.MeshingParameters.QualityRenderMesh
 
+        object_meshes = []
+        total_vertices = 0
+        total_faces = 0
         for obj_id in object_ids:
 
             rhino_obj = sc.doc.Objects.Find(obj_id)
@@ -49,26 +50,31 @@ def export_nominal_mesh(save_path=None):
                 )
 
                 if meshes:
-                    for m in meshes:
-                        combined_mesh.Append(m)
+                    meshes = list(meshes)
                 else:
                     raise RuntimeError("Could not mesh a nominal object.")
 
             elif isinstance(geometry, Rhino.Geometry.Mesh):
 
-                combined_mesh.Append(geometry)
+                meshes = [geometry.DuplicateMesh()]
             else:
                 raise RuntimeError("Unsupported nominal geometry type.")
 
 
-        # Important for simple OBJ export
-        combined_mesh.Faces.ConvertQuadsToTriangles()
-        combined_mesh.Compact()
+            part_id = rs.GetUserText(obj_id, "PART_ID")
+            if not part_id:
+                raise RuntimeError("Nominal object has no PART_ID.")
+            for mesh in meshes:
+                mesh.Faces.ConvertQuadsToTriangles()
+                mesh.Compact()
+                object_meshes.append((part_id, mesh))
+                total_vertices += mesh.Vertices.Count
+                total_faces += mesh.Faces.Count
 
 
         print("Nominal CAD meshed.")
-        print("Vertices: {}".format(combined_mesh.Vertices.Count))
-        print("Triangles: {}".format(combined_mesh.Faces.Count))
+        print("Vertices: {}".format(total_vertices))
+        print("Triangles: {}".format(total_faces))
 
 
         # --------------------------------------------------------
@@ -84,41 +90,29 @@ def export_nominal_mesh(save_path=None):
 
         if save_path:
 
-            if combined_mesh.Faces.Count == 0:
+            if total_faces == 0:
                 raise RuntimeError("Nominal reference has no mesh faces.")
             f = open(save_path, "w")
 
             f.write("# ShipQA nominal reference mesh\n")
             f.write("# Units: millimetres\n")
 
-            # vertices
-            for i in range(combined_mesh.Vertices.Count):
-
-                v = combined_mesh.Vertices[i]
-
-                f.write(
-                    "v {:.6f} {:.6f} {:.6f}\n".format(
-                        v.X,
-                        v.Y,
-                        v.Z
-                    )
-                )
-
-
-            # triangle faces - OBJ uses 1-based indexing
-            for i in range(combined_mesh.Faces.Count):
-
-                face = combined_mesh.Faces[i]
-
-                if face.IsTriangle:
-
-                    f.write(
-                        "f {} {} {}\n".format(
-                            face.A + 1,
-                            face.B + 1,
-                            face.C + 1
-                        )
-                    )
+            vertex_offset = 0
+            for part_id, mesh in object_meshes:
+                # Group identity is ignored by the global distance mesh but lets
+                # the external engine recover component-specific nominal faces.
+                f.write("g {}\n".format(part_id))
+                for i in range(mesh.Vertices.Count):
+                    v = mesh.Vertices[i]
+                    f.write("v {:.6f} {:.6f} {:.6f}\n".format(v.X, v.Y, v.Z))
+                for i in range(mesh.Faces.Count):
+                    face = mesh.Faces[i]
+                    if face.IsTriangle:
+                        f.write("f {} {} {}\n".format(
+                            face.A + 1 + vertex_offset,
+                            face.B + 1 + vertex_offset,
+                            face.C + 1 + vertex_offset))
+                vertex_offset += mesh.Vertices.Count
 
 
             f.close()

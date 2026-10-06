@@ -82,6 +82,7 @@ def generate_synthetic_scan(asbuilt_ids=None, save_path=None, seed=RANDOM_SEED,
         asbuilt_ids = rs.ObjectsByLayer(ASBUILT_LAYER) or []
 
     known_shift_mm = None
+    known_shift_xyz_mm = None
 
     for obj_id in asbuilt_ids:
         # Ground truth for reporting only; sampling uses the geometry below.
@@ -92,6 +93,14 @@ def generate_synthetic_scan(asbuilt_ids=None, save_path=None, seed=RANDOM_SEED,
         if shift_text:
             try:
                 known_shift_mm = float(shift_text)
+                values = []
+                for key in ("KNOWN_SHIFT_X_MM", "KNOWN_SHIFT_Y_MM", "KNOWN_SHIFT_Z_MM"):
+                    try:
+                        value = rs.GetUserText(obj_id, key)
+                    except:
+                        value = None
+                    values.append(float(value) if value not in (None, "") else 0.0)
+                known_shift_xyz_mm = values
                 break
             except:
                 pass
@@ -297,7 +306,10 @@ def generate_synthetic_scan(asbuilt_ids=None, save_path=None, seed=RANDOM_SEED,
                     rs.SetUserText(
                         cloud_id,
                         "KNOWN_DEFECT",
-                        "STF_03 {:+.3f} mm Y SHIFT".format(known_shift_mm)
+                        ("STF_03 XYZ TRANSLATION "
+                         "[{:+.3f}, {:+.3f}, {:+.3f}] mm").format(
+                             known_shift_xyz_mm[0], known_shift_xyz_mm[1],
+                             known_shift_xyz_mm[2])
                     )
 
 
@@ -349,7 +361,9 @@ def generate_synthetic_scan(asbuilt_ids=None, save_path=None, seed=RANDOM_SEED,
             )
             print("Known defect:")
             if known_shift_mm is not None:
-                print("STF_03 = {:+.3f} mm transverse shift".format(known_shift_mm))
+                print("STF_03 XYZ = [{:+.3f}, {:+.3f}, {:+.3f}] mm".format(
+                    known_shift_xyz_mm[0], known_shift_xyz_mm[1],
+                    known_shift_xyz_mm[2]))
             print("--------------------------------------")
 
             triangle_coordinates = [[[p.X, p.Y, p.Z] for p in tri] for tri in triangles]
@@ -357,7 +371,8 @@ def generate_synthetic_scan(asbuilt_ids=None, save_path=None, seed=RANDOM_SEED,
             return {"point_count": len(scan_points), "noise_sigma_mm": NOISE_SIGMA_MM,
                     "seed": seed, "triangle_count": len(triangles),
                     "surface_area_mm2": total_area, "sampling_triangles_sha256": triangle_hash,
-                    "part_order": [rs.GetUserText(obj, "PART_ID") for obj in asbuilt_ids]}
+                    "part_order": [rs.GetUserText(obj, "PART_ID") for obj in asbuilt_ids],
+                    "reported_known_translation_xyz_mm": known_shift_xyz_mm}
 
 
 if __name__ == "__main__":
