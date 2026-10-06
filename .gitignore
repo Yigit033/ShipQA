@@ -1,0 +1,28 @@
+# Python environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Runtime outputs
+data/defect_candidates.xyz
+data/analysis/
+data/distance_investigation/
+data/registration_validation/
+data/registration_robustness/
+data/regression/**/interface_prediction/
+data/validation/**/cases/**/prediction/
+data/validation/**/summary.csv
+data/validation/**/aggregate.json
+data/validation/**/prediction_phase.json
+
+# Temporary files
+*.tmp
+*.bak
