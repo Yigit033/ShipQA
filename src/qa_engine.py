@@ -11,6 +11,7 @@ import open3d as o3d
 
 from registration import initial_transform_from_spec, register_scan_to_nominal
 from surface_distance import compute_surface_deviation
+from component_pose import estimate_translation_xyz
 
 
 # ---------------------------------------------------------
@@ -276,7 +277,9 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
         "defect_cluster_count": defect_cluster_count,
         "detected_component": None,
         "points_used": 0, "nominal_center_y_mm": None, "observed_center_y_mm": None,
-        "estimated_shift_y_mm": None, "surface_p95_mm": float(np.percentile(distances, 95)),
+        "estimated_shift_y_mm": None, "estimated_translation_xyz_mm": None,
+        "component_pose": {"status": "not_estimated"},
+        "surface_p95_mm": float(np.percentile(distances, 95)),
         "surface_p99_mm": float(np.percentile(distances, 99)),
         "surface_min_mm": float(distances.min()), "surface_median_mm": float(np.median(distances)),
         "surface_mean_mm": float(distances.mean()), "surface_max_mm": float(distances.max()),
@@ -513,6 +516,21 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
             result.update(status="estimated", observed_center_y_mm=float(observed_center_y),
                           estimated_shift_y_mm=float(estimated_shift_y),
                           observed_y_envelope_mm=[float(y_low), float(y_high)])
+            try:
+                pose = estimate_translation_xyz(
+                    scan_points, closest_component, mesh_path,
+                    float(estimated_shift_y), component_points)
+                if pose is not None:
+                    result["estimated_translation_xyz_mm"] = pose[
+                        "estimated_translation_xyz_mm"]
+                    result["component_pose"] = dict(pose, status="estimated")
+            except ValueError as error:
+                # Historical OBJ fixtures have no group records. Their validated
+                # Y result remains available; XYZ pose is explicitly unavailable.
+                result["component_pose"] = {
+                    "status": "unsupported_reference",
+                    "reason": str(error),
+                }
 
     return result
 
@@ -538,6 +556,7 @@ def run_prediction(scan_path, mesh_path, manifest_path, output_dir, registration
                 result = {"schema_version": 1, "status": "error", "units": "mm",
                           "error": str(error), "candidate_count": None,
                           "detected_component": None, "estimated_shift_y_mm": None,
+                          "estimated_translation_xyz_mm": None,
                           "points_used": None}
     with (output_dir / "prediction.json").open("x", encoding="utf-8") as stream:
         json.dump(result, stream, indent=2, allow_nan=False)
