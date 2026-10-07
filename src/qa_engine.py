@@ -12,6 +12,7 @@ import open3d as o3d
 from registration import initial_transform_from_spec, register_scan_to_nominal
 from surface_distance import compute_surface_deviation
 from component_pose import estimate_translation_xyz
+from component_rotation import estimate_component_rotation
 
 
 # ---------------------------------------------------------
@@ -279,6 +280,7 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
         "points_used": 0, "nominal_center_y_mm": None, "observed_center_y_mm": None,
         "estimated_shift_y_mm": None, "estimated_translation_xyz_mm": None,
         "component_pose": {"status": "not_estimated"},
+        "component_rotation": {"status": "not_estimated"},
         "surface_p95_mm": float(np.percentile(distances, 95)),
         "surface_p99_mm": float(np.percentile(distances, 99)),
         "surface_min_mm": float(distances.min()), "surface_median_mm": float(np.median(distances)),
@@ -290,6 +292,8 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
         "distance_kernel_sha256": file_hash(Path(__file__).with_name("surface_distance.py")),
         "component_pose_kernel_sha256": file_hash(
             Path(__file__).with_name("component_pose.py")),
+        "component_rotation_kernel_sha256": file_hash(
+            Path(__file__).with_name("component_rotation.py")),
         "registration": registration_result,
         "registration_kernel_sha256": (
             file_hash(Path(__file__).with_name("registration.py")) if registration else None),
@@ -537,6 +541,12 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
                     "status": "unsupported_reference",
                     "reason": str(error),
                 }
+            try:
+                result["component_rotation"] = estimate_component_rotation(
+                    scan_points, closest_component, mesh_path)
+            except ValueError as error:
+                result["component_rotation"] = {
+                    "status": "unsupported_reference", "reason": str(error)}
 
     return result
 
@@ -563,6 +573,7 @@ def run_prediction(scan_path, mesh_path, manifest_path, output_dir, registration
                           "error": str(error), "candidate_count": None,
                           "detected_component": None, "estimated_shift_y_mm": None,
                           "estimated_translation_xyz_mm": None,
+                          "component_rotation": {"status": "not_estimated"},
                           "points_used": None}
     with (output_dir / "prediction.json").open("x", encoding="utf-8") as stream:
         json.dump(result, stream, indent=2, allow_nan=False)

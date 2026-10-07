@@ -53,7 +53,7 @@ def load_grouped_obj_component(path, part_ids):
 
 
 def sample_triangle_mesh(vertices, triangles, count=NOMINAL_SAMPLE_COUNT,
-                         seed=NOMINAL_SAMPLE_SEED):
+                         seed=NOMINAL_SAMPLE_SEED, return_normals=False):
     """Deterministically sample triangle area for a nominal quantile reference."""
     tri = vertices[triangles]
     areas = np.linalg.norm(np.cross(tri[:, 1] - tri[:, 0],
@@ -67,9 +67,33 @@ def sample_triangle_mesh(vertices, triangles, count=NOMINAL_SAMPLE_COUNT,
     first = rng.random(count)
     second = rng.random(count)
     root = np.sqrt(first)
-    return ((1.0 - root)[:, None] * selected[:, 0]
-            + (root * (1.0 - second))[:, None] * selected[:, 1]
-            + (root * second)[:, None] * selected[:, 2])
+    points = ((1.0 - root)[:, None] * selected[:, 0]
+              + (root * (1.0 - second))[:, None] * selected[:, 1]
+              + (root * second)[:, None] * selected[:, 2])
+    if not return_normals:
+        return points
+    cross = np.cross(selected[:, 1] - selected[:, 0],
+                     selected[:, 2] - selected[:, 0])
+    length = np.linalg.norm(cross, axis=1)
+    normals = np.divide(cross, length[:, None], out=np.zeros_like(cross),
+                        where=length[:, None] > 0.0)
+    return points, normals
+
+
+def select_component_region(scan_points, component, margin_mm=POSE_MARGIN_MM):
+    """Select a broad component region while excluding the nominal plate skin."""
+    bbox_min = np.asarray(component["bbox"]["min"], dtype=np.float64)
+    bbox_max = np.asarray(component["bbox"]["max"], dtype=np.float64)
+    minimum_component_z = bbox_min[2] + 5.0
+    mask = (
+        (scan_points[:, 0] >= bbox_min[0] - margin_mm)
+        & (scan_points[:, 0] <= bbox_max[0] + margin_mm)
+        & (scan_points[:, 1] >= bbox_min[1] - margin_mm)
+        & (scan_points[:, 1] <= bbox_max[1] + margin_mm)
+        & (scan_points[:, 2] >= minimum_component_z)
+        & (scan_points[:, 2] <= bbox_max[2] + margin_mm)
+    )
+    return scan_points[mask]
 
 
 def estimate_translation_xyz(scan_points, component, mesh_path,
@@ -83,16 +107,7 @@ def estimate_translation_xyz(scan_points, component, mesh_path,
     bbox_min = np.asarray(component["bbox"]["min"], dtype=np.float64)
     bbox_max = np.asarray(component["bbox"]["max"], dtype=np.float64)
     vertices, triangles = load_grouped_obj_component(mesh_path, component["part_ids"])
-    minimum_component_z = bbox_min[2] + 5.0
-    mask = (
-        (scan_points[:, 0] >= bbox_min[0] - POSE_MARGIN_MM)
-        & (scan_points[:, 0] <= bbox_max[0] + POSE_MARGIN_MM)
-        & (scan_points[:, 1] >= bbox_min[1] - POSE_MARGIN_MM)
-        & (scan_points[:, 1] <= bbox_max[1] + POSE_MARGIN_MM)
-        & (scan_points[:, 2] >= minimum_component_z)
-        & (scan_points[:, 2] <= bbox_max[2] + POSE_MARGIN_MM)
-    )
-    observed = scan_points[mask]
+    observed = select_component_region(scan_points, component)
     if len(observed) == 0:
         return None
     nominal = sample_triangle_mesh(vertices, triangles)
