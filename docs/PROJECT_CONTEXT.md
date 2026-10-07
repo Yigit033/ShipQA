@@ -12,10 +12,20 @@ transform with robust point-to-plane ICP against grouped nominal component faces
 It reports the rotation matrix, signed XYZ Euler angles, center translation,
 fitness, RMSE and source hash without receiving ground truth or the expected axis.
 
-All 54 tests pass. A known synthetic local rotation is recovered within 0.1 degree.
-A pure Y=-8 mm translation cross-check produced only 0.01365 degrees apparent
-rotation. The Rhino rotation sweep has not yet been generated and no STF_03
-rotation accuracy claim is made. See [COMPONENT_ROTATION.md](COMPONENT_ROTATION.md).
+The Rhino rotation sweep completed on 2026-10-07. All 10 detectable rotations were
+detected, identified as STF_03 and passed the local pose quality gate. Mean/maximum
+total angular error are 0.00935/0.01542 degrees. RX, RY and RZ target-axis MAE are
+0.00642, 0.000225 and 0.000336 degrees respectively. The two RX +/-1.5 degree
+threshold-characterization cases correctly produced no supported detection, and
+the zero control had no false positive.
+
+The first pass revealed an overly narrow coarse robust loss and isotropic
+clustering that rejected distributed roll evidence. Progressive ICP robust scales
+and a manifest-aligned longest-axis fallback corrected both causes. The unchanged
+5 mm gate and 10-point support remain in force. A rerun of the earlier 24-case
+registration/outlier matrix retained 24/24 correct acceptance decisions and zero
+false positives in all six accepted controls. All 55 tests pass. See
+[COMPONENT_ROTATION.md](COMPONENT_ROTATION.md).
 
 ## Current status update - multi-axis translation hardening
 

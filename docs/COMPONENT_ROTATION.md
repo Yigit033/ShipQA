@@ -38,9 +38,9 @@ component's grouped nominal faces. The output includes:
 - point counts, stage fitness and inlier RMSE
 - estimator source hash
 
-The result is currently `estimated_provisional`. Field acceptance thresholds will
-be defined from the controlled Rhino sweep rather than selected in advance to make
-the results pass.
+Controlled acceptance requires final ICP fitness at least 0.95 and inlier RMSE at
+most 5 mm. Failed quality returns `rejected_low_quality`. These remain controlled
+qualification limits; real-data field limits require real scanner validation.
 
 ## Current evidence
 
@@ -49,8 +49,39 @@ degree angular error. On a previous pure Y=-8 mm translation scan, the estimator
 returns only 0.01365 degrees rotation, providing an initial translation/rotation
 separation check. The preserved historical Y regression remains unchanged.
 
-The Rhino rotation batch has not yet been generated, so no controlled STF_03
-rotation accuracy claim is made.
+## Completed sweep - 2026-10-07
+
+Rhino generated all 13 scans in
+`component_rotation_20261007T151253Z_92186729`.
+
+The first run exposed two independent limitations. A fixed 3 mm Tukey loss rejected
+real coarse inliers displaced by up to 26 mm, producing 0.408 degree mean angular
+error. Progressive robust scales of 30, 10 and 3 mm reduced mean angular error to
+0.00935 degrees and maximum error to 0.01542 degrees.
+
+RX +/-5 degree roll produced 161--164 valid threshold points distributed along the
+4000 mm stiffener, so isotropic 100 mm DBSCAN rejected them as locally sparse. A
+manifest-aware fallback scales only the component's longest axis before applying
+the unchanged 100 mm / 10 point support criteria. Both roll cases are now detected
+without changing the 5 mm surface gate. The earlier 24-case registration/outlier
+matrix retained 24/24 correct acceptance decisions and zero false positives in all
+six accepted controls.
+
+Final results:
+
+- zero-control false positives: 0/1
+- detectable rotations detected: 10/10
+- correct component identifications: 10/10
+- valid quality-gated rotation estimates: 10/10
+- mean / maximum total angular error: 0.00935 / 0.01542 degrees
+- RX bias / MAE / maximum target-axis error: -0.00642 / 0.00642 / 0.00949 degrees
+- RY bias / MAE / maximum target-axis error: 0.000225 / 0.000225 / 0.000417 degrees
+- RZ bias / MAE / maximum target-axis error: -0.000336 / 0.000336 / 0.000347 degrees
+- RX +/-1.5 degree threshold characterization: 0/2 detected, as expected
+- execution failures: 0
+
+All 55 tests pass. The final analysis is preserved under
+`component_rotation_20261007T151253Z_92186729_final`.
 
 ## Run sequence
 
