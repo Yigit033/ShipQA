@@ -288,6 +288,8 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
         "engine_sha256": file_hash(Path(__file__)),
         "distance_method": "float64_exhaustive_triangle_surface",
         "distance_kernel_sha256": file_hash(Path(__file__).with_name("surface_distance.py")),
+        "component_pose_kernel_sha256": file_hash(
+            Path(__file__).with_name("component_pose.py")),
         "registration": registration_result,
         "registration_kernel_sha256": (
             file_hash(Path(__file__).with_name("registration.py")) if registration else None),
@@ -523,7 +525,11 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
                 if pose is not None:
                     result["estimated_translation_xyz_mm"] = pose[
                         "estimated_translation_xyz_mm"]
-                    result["component_pose"] = dict(pose, status="estimated")
+                    pose_status = ("estimated" if all(
+                        value is not None
+                        for value in pose["estimated_translation_xyz_mm"])
+                        else "partial_estimate")
+                    result["component_pose"] = dict(pose, status=pose_status)
             except ValueError as error:
                 # Historical OBJ fixtures have no group records. Their validated
                 # Y result remains available; XYZ pose is explicitly unavailable.

@@ -14,6 +14,8 @@ LOW_PERCENTILE = 2.0
 HIGH_PERCENTILE = 98.0
 NOMINAL_SAMPLE_COUNT = 100000
 NOMINAL_SAMPLE_SEED = 1729
+NORMAL_ALIGNMENT_MIN = 0.95
+MIN_EXPECTED_AXIS_SUPPORT_POINTS = 10.0
 
 
 def load_grouped_obj_component(path, part_ids):
@@ -100,19 +102,55 @@ def estimate_translation_xyz(scan_points, component, mesh_path,
         nominal, [LOW_PERCENTILE, HIGH_PERCENTILE], axis=0)
     observed_center = observed_envelope.mean(axis=0)
     nominal_center = nominal_envelope.mean(axis=0)
-    translation = observed_center - nominal_center
-    # Preserve the validated Y estimator byte-for-byte in the public vector.
-    translation[1] = legacy_y_shift_mm
+    envelope_translation = observed_center - nominal_center
+
+    tri = vertices[triangles]
+    cross = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
+    double_area = np.linalg.norm(cross, axis=1)
+    normals = np.divide(
+        cross, double_area[:, None], out=np.zeros_like(cross),
+        where=double_area[:, None] > 0.0)
+    total_area = float((double_area * 0.5).sum())
+    axis_status = {}
+    translation = [None, None, None]
+    axis_names = "xyz"
+    for axis in range(3):
+        supported_area = float((double_area[
+            np.abs(normals[:, axis]) >= NORMAL_ALIGNMENT_MIN] * 0.5).sum())
+        area_fraction = supported_area / total_area
+        expected_points = float(len(observed) * area_fraction)
+        observable = expected_points >= MIN_EXPECTED_AXIS_SUPPORT_POINTS
+        axis_status[axis_names[axis]] = {
+            "status": "estimated" if observable else "insufficient_geometric_support",
+            "normal_aligned_surface_fraction": area_fraction,
+            "expected_support_points": expected_points,
+            "minimum_expected_support_points": MIN_EXPECTED_AXIS_SUPPORT_POINTS,
+            "normal_alignment_minimum": NORMAL_ALIGNMENT_MIN,
+        }
+        if observable:
+            translation[axis] = float(envelope_translation[axis])
+
+    # Preserve the validated Y estimator byte-for-byte when Y is observable.
+    if translation[1] is not None:
+        translation[1] = float(legacy_y_shift_mm)
+        axis_status["y"]["method"] = "validated_legacy_percentile_envelope"
+
+    # The lower Z region may be hidden by or intersect the plate. The upper
+    # component surface remains observable for both signs of rigid Z translation.
+    if translation[2] is not None:
+        translation[2] = float(observed_envelope[1, 2] - nominal_envelope[1, 2])
+        axis_status["z"]["method"] = "upper_component_surface_percentile"
+
+    if translation[0] is not None:
+        axis_status["x"]["method"] = "two_sided_percentile_envelope"
     return {
-        "estimated_translation_xyz_mm": translation.tolist(),
+        "estimated_translation_xyz_mm": translation,
+        "axis_status": axis_status,
         "pose_points_used": int(len(observed)),
         "legacy_y_points_used": int(len(legacy_component_points)),
         "observed_pose_envelope_mm": observed_envelope.tolist(),
         "nominal_pose_envelope_mm": nominal_envelope.tolist(),
         "method": "grouped_component_surface_percentile_envelope",
         "percentiles": [LOW_PERCENTILE, HIGH_PERCENTILE],
-        "limitations": [
-            "X translation of a long prismatic stiffener is weakly observable at its ends",
-            "Negative Z translation can intersect the nominal base plate",
-        ],
+        "limitations": ["Negative Z translation can intersect the nominal base plate"],
     }

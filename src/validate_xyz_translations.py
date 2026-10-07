@@ -27,16 +27,24 @@ def evaluate_case(case_id, prediction, truth):
     candidates = p.get("candidate_count")
     component = p.get("detected_component")
     estimate_value = p.get("estimated_translation_xyz_mm")
-    estimate = None
+    estimate = [None, None, None]
     if isinstance(estimate_value, list) and len(estimate_value) == 3:
-        candidate = np.asarray(estimate_value, dtype=np.float64)
-        if np.isfinite(candidate).all():
-            estimate = candidate
+        for axis, value in enumerate(estimate_value):
+            if (isinstance(value, (int, float)) and not isinstance(value, bool)
+                    and math.isfinite(value)):
+                estimate[axis] = float(value)
     detected = candidates > 0 if completed and isinstance(candidates, int) else None
     correct = component == target if completed and component else None
+    changed_axes = np.flatnonzero(injected != 0.0).tolist()
+    target_axis = changed_axes[0] if len(changed_axes) == 1 else None
     valid = bool(completed and status == "estimated" and correct is True
-                 and estimate is not None and category == "detectable_translation")
-    error = estimate - injected if valid else None
+                 and target_axis is not None and estimate[target_axis] is not None
+                 and category == "detectable_translation")
+    errors = [None if estimate[axis] is None else estimate[axis] - float(injected[axis])
+              for axis in range(3)]
+    vector_valid = all(value is not None for value in estimate)
+    vector_error = (float(np.linalg.norm(np.asarray(estimate) - injected))
+                    if vector_valid and category == "detectable_translation" else None)
     if not completed:
         outcome = status
     elif category == "zero_defect_control":
@@ -59,20 +67,22 @@ def evaluate_case(case_id, prediction, truth):
         "outcome": outcome, "prediction_completed": completed,
         "detected": detected, "candidate_count": candidates,
         "detected_component": component, "correct_component": correct,
-        "predicted_x_mm": None if estimate is None else float(estimate[0]),
-        "predicted_y_mm": None if estimate is None else float(estimate[1]),
-        "predicted_z_mm": None if estimate is None else float(estimate[2]),
-        "signed_error_x_mm": None if error is None else float(error[0]),
-        "signed_error_y_mm": None if error is None else float(error[1]),
-        "signed_error_z_mm": None if error is None else float(error[2]),
-        "absolute_error_x_mm": None if error is None else float(abs(error[0])),
-        "absolute_error_y_mm": None if error is None else float(abs(error[1])),
-        "absolute_error_z_mm": None if error is None else float(abs(error[2])),
-        "vector_error_mm": None if error is None else float(np.linalg.norm(error)),
+        "predicted_x_mm": estimate[0], "predicted_y_mm": estimate[1],
+        "predicted_z_mm": estimate[2],
+        "axis_status_x": p.get("component_pose", {}).get("axis_status", {}).get("x", {}).get("status"),
+        "axis_status_y": p.get("component_pose", {}).get("axis_status", {}).get("y", {}).get("status"),
+        "axis_status_z": p.get("component_pose", {}).get("axis_status", {}).get("z", {}).get("status"),
+        "signed_error_x_mm": errors[0], "signed_error_y_mm": errors[1],
+        "signed_error_z_mm": errors[2],
+        "absolute_error_x_mm": None if errors[0] is None else abs(errors[0]),
+        "absolute_error_y_mm": None if errors[1] is None else abs(errors[1]),
+        "absolute_error_z_mm": None if errors[2] is None else abs(errors[2]),
+        "vector_error_mm": vector_error,
         "points_used": p.get("points_used"),
         "pose_points_used": p.get("component_pose", {}).get("pose_points_used"),
         "surface_p95_mm": p.get("surface_p95_mm"),
         "surface_p99_mm": p.get("surface_p99_mm"), "valid_estimate": valid,
+        "vector_estimate_valid": vector_valid,
     }
 
 
@@ -99,18 +109,30 @@ def aggregate_results(rows):
         },
     }
     for index, axis in enumerate("xyz"):
-        errors = [row["signed_error_{}_mm".format(axis)] for row in valid]
+        axis_cases = [row for row in detectable
+                      if row["injected_{}_mm".format(axis)] != 0.0]
+        axis_valid = [row for row in axis_cases
+                      if row["signed_error_{}_mm".format(axis)] is not None
+                      and row["correct_component"] is True]
+        errors = [row["signed_error_{}_mm".format(axis)] for row in axis_valid]
         aggregate["estimation"][axis] = {
+            "expected_axis_cases": len(axis_cases),
+            "valid_axis_estimates": len(axis_valid),
+            "excluded_cases": [{"case_id": row["case_id"], "reason": row["outcome"]}
+                               for row in axis_cases if row not in axis_valid],
             "mean_signed_error_mm": sum(errors) / len(errors) if errors else None,
             "mae_mm": sum(abs(value) for value in errors) / len(errors) if errors else None,
             "maximum_absolute_error_mm": max(abs(value) for value in errors) if errors else None,
         }
-    vector_errors = [row["vector_error_mm"] for row in valid]
+    vector_valid = [row for row in detectable if row["vector_error_mm"] is not None]
+    vector_errors = [row["vector_error_mm"] for row in vector_valid]
     aggregate["estimation"]["vector"] = {
         "mae_mm": sum(vector_errors) / len(vector_errors) if vector_errors else None,
         "maximum_error_mm": max(vector_errors) if vector_errors else None,
-        "worst_case": (max(valid, key=lambda row: row["vector_error_mm"])["case_id"]
-                       if valid else None),
+        "valid_vector_estimates": len(vector_valid),
+        "expected_detectable_cases": len(detectable),
+        "worst_case": (max(vector_valid, key=lambda row: row["vector_error_mm"])["case_id"]
+                       if vector_valid else None),
     }
     return aggregate
 
