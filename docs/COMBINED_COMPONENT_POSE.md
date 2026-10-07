@@ -67,7 +67,45 @@ of 0.006572 degrees. Three existing pure-rotation cases keep inferred Y/Z center
 movement within 0.015 mm. The archived legacy -8 mm regression remains
 -8.126176 mm, and all 62 automated tests pass.
 
-The eleven-case Rhino sweep has not yet been generated or evaluated. Therefore the
-combined-pose capability is implemented and regression checked, but it is not yet
-qualified across the planned STF_03 range. It is also not evidence of readiness for
-arbitrary ship components or real yard scans.
+## Completed sweep result
+
+Rhino run:
+
+`data/validation/combined_pose_20261007T153550Z_378d6b84`
+
+All ten non-zero cases were detected, all ten identified STF_03, and all ten
+produced a quality-gated Y/Z-plus-rotation pose. The zero control produced no raw or
+supported candidates and no false component finding. There were no execution
+failures.
+
+| Case | Injected translation XYZ mm | Predicted XYZ mm | Injected rotation XYZ deg | Predicted rotation XYZ deg | Angular error deg | Candidates |
+|---|---:|---:|---:|---:|---:|---:|
+| 002 | 0, -16, 8 | null, -15.994641, 8.012481 | 0, 0, 0.75 | -0.013888, 0.000227, 0.749683 | 0.013893 | 1214 |
+| 003 | 0, 16, -8 | null, 16.009386, -7.993319 | 0, 0, -0.75 | -0.020183, 0.000208, -0.750529 | 0.020191 | 1090 |
+| 004 | 0, -8, -12 | null, -7.989817, -11.986839 | 0, 0.75, 0 | -0.013219, 0.750379, -0.000429 | 0.013226 | 970 |
+| 005 | 0, 8, 12 | null, 8.011895, 12.003743 | 0, -0.75, 0 | -0.011982, -0.749994, -0.000338 | 0.011991 | 1061 |
+| 006 | 0, -8, 4 | null, -7.988491, 4.013394 | 5, 0, 0 | 4.988021, 0.000236, -0.000275 | 0.011984 | 628 |
+| 007 | 0, 8, -4 | null, 8.011276, -3.992558 | -5, 0, 0 | -5.015132, 0.000124, -0.000487 | 0.015140 | 636 |
+| 008 | 8, -8, 4 | null, -7.993001, 4.010536 | 0, 0, 0.75 | -0.010343, 0.000244, 0.749632 | 0.010353 | 836 |
+| 009 | -8, 8, -4 | null, 8.012757, -3.994644 | 0, -0.75, 0 | -0.010851, -0.749987, -0.000469 | 0.010867 | 945 |
+| 010 | 0, -12, 8 | null, -11.991187, 8.007009 | 2, -0.5, 0.5 | 1.991810, -0.499946, 0.499652 | 0.008200 | 1139 |
+| 011 | 0, 12, -8 | null, 12.015644, -7.988645 | -2, 0.5, -0.5 | -2.008921, 0.500343, -0.500507 | 0.008937 | 1045 |
+
+Aggregate translation results use explicit denominators:
+
+- Y: 10/10 estimates, +0.010382 mm bias, 0.010382 mm MAE, 0.015644 mm maximum absolute error;
+- Z: 10/10 estimates, +0.009116 mm bias, 0.009116 mm MAE, 0.013394 mm maximum absolute error;
+- X characterization: 0/2 estimates because the long component has insufficient longitudinal surface support.
+
+Rotation was valid in 10/10 cases. Mean total angular error was 0.012478 degrees
+and maximum total angular error was 0.020191 degrees. Final local fitness was
+0.999449--0.999498 and RMSE was 3.447--3.459 mm.
+
+All Y and Z errors have a small positive sign, and RX has a small negative bias.
+Opposite injected directions remain similar in magnitude, so this run does not show
+a concerning sign-dependent failure. The small systematic terms should be tracked
+on real and independently measured data rather than corrected from one synthetic
+sampling realization.
+
+This qualifies combined pose only for the present STF_03 synthetic geometry and
+sampling model. It does not qualify arbitrary ship components or real yard scans.

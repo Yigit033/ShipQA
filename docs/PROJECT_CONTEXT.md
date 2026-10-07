@@ -2,14 +2,14 @@
 
 ## Current status update - combined component rigid pose
 
-The next controlled hardening stage is implemented and ready for Rhino generation.
+The controlled combined-pose hardening stage is complete.
 ShipQA now derives component center translation and signed XYZ rotation from the
 same quality-gated local rigid transform. Unsupported translation axes remain null;
 for the current long STF_03 geometry, X remains unobservable while Y and Z have
 surface-normal support. When rotation exceeds 0.1 degrees, the engine now publishes
 this joint-pose translation instead of the invalid legacy axis-envelope result.
 
-The new sequential eleven-case Rhino batch combines Y/Z translations with
+The sequential eleven-case Rhino batch combines Y/Z translations with
 single-axis and multi-axis rotations, includes a zero control, and contains two
 explicit X-observability characterization cases. Every case is rebuilt from nominal
 geometry. The external evaluator completes all predictions before reading ground
@@ -18,8 +18,12 @@ truth and reports all denominators.
 The preserved historical -8 mm result remains -8.126176 mm. On the newer grouped
 -8 mm fixture, the local rigid transform estimates Y as -7.986415 mm with only
 0.006572 degrees of residual rotation. Existing pure-rotation STF_03 fixtures keep
-inferred Y/Z center translation below 0.015 mm. All 62 tests pass. The new combined
-sweep has not yet run in Rhino, so range qualification is still pending. See
+inferred Y/Z center translation below 0.015 mm. The completed sweep detected and
+correctly identified STF_03 in 10/10 non-zero cases, returned 10/10 valid Y/Z plus
+rotation poses, and produced no false positive in the zero control. Y/Z MAE are
+0.010382/0.009116 mm; mean/maximum total angular errors are 0.012478/0.020191
+degrees. Longitudinal X remains correctly unavailable in 0/2 characterization
+cases. All 62 tests pass. See
 [COMBINED_COMPONENT_POSE.md](COMBINED_COMPONENT_POSE.md).
 
 ## Current status update - local component rotation implementation

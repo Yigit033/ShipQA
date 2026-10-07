@@ -38,6 +38,8 @@ Current controlled results include:
 - registration acceptance behaviour correct in 24 out of 24 robustness cases,
 - twelve out of twelve detectable robustness cases correctly identified,
 - unsafe partial or badly oriented registrations rejected before QA,
+- ten out of ten combined translation-plus-rotation cases correctly identified,
+- 0.0104/0.0091 mm Y/Z MAE and 0.0125 degree mean angular error in that sweep,
 - sixty-two automated tests passing.
 
 See [registration robustness](docs/REGISTRATION_ROBUSTNESS.md),
@@ -246,8 +248,8 @@ includes:
 - occlusion and varying scan density,
 - multi-station scan registration,
 - survey-network and scanner systematic errors,
-- combined-pose range qualification, deformation, missing components, and multiple defects,
-- validation on real point-cloud data.
+- deformation, missing components, multiple defects, and broader component geometries,
+- qualification on a frozen, independently measured real-data pilot,
 
 Registration thresholds currently reflect the controlled 0.35 mm-noise prototype;
 they are not shipyard acceptance tolerances. Classification-society, yard, project,
