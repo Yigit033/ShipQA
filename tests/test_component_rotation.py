@@ -41,6 +41,8 @@ class RotationPrimitiveTests(unittest.TestCase):
         actual = component_rotation.rotation_matrix_to_euler_xyz_degrees(
             euler_matrix(expected))
         np.testing.assert_allclose(actual, expected, atol=1e-12)
+        self.assertAlmostEqual(component_rotation.rotation_angle_degrees(
+            euler_matrix([0, 0.75, 0])), 0.75, places=10)
 
     def test_estimator_has_no_ground_truth_or_expected_axis_input(self):
         self.assertEqual(list(inspect.signature(

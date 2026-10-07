@@ -26,6 +26,7 @@ DEFECT_THRESHOLD_MM = 5.0
 DEFECT_CLUSTER_RADIUS_MM = 100.0
 MIN_DEFECT_CLUSTER_POINTS = 10
 LONGITUDINAL_SUPPORT_SCALE = 0.20
+MAX_TRANSLATION_ONLY_ROTATION_DEG = 0.10
 MIN_REGISTRATION_FINE_FITNESS = 0.85
 MAX_REGISTRATION_SURFACE_P95_MM = 2.0
 MIN_REGISTRATION_RETAINED_FRACTION = 0.75
@@ -576,6 +577,16 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
             try:
                 result["component_rotation"] = estimate_component_rotation(
                     scan_points, closest_component, mesh_path)
+                if (result["component_rotation"].get("status") == "estimated"
+                        and result["component_rotation"]["estimated_rotation_angle_deg"]
+                        > MAX_TRANSLATION_ONLY_ROTATION_DEG):
+                    result["component_pose"]["status"] = "invalid_under_component_rotation"
+                    result["component_pose"]["reason"] = (
+                        "Axis-envelope translation assumes an unrotated component")
+                    result["component_pose"]["maximum_translation_only_rotation_deg"] = (
+                        MAX_TRANSLATION_ONLY_ROTATION_DEG)
+                    result["estimated_translation_xyz_mm"] = None
+                    result["estimated_shift_y_mm"] = None
             except ValueError as error:
                 result["component_rotation"] = {
                     "status": "unsupported_reference", "reason": str(error)}

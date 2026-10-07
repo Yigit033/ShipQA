@@ -80,8 +80,13 @@ Final results:
 - RX +/-1.5 degree threshold characterization: 0/2 detected, as expected
 - execution failures: 0
 
+The legacy axis-envelope translation estimate is invalid once local rotation
+exceeds 0.1 degrees. ShipQA now nulls that translation and marks it
+`invalid_under_component_rotation`; combined translation+rotation will be handled
+by the next joint-pose phase.
+
 All 55 tests pass. The final analysis is preserved under
-`component_rotation_20261007T151253Z_92186729_final`.
+`component_rotation_20261007T151253Z_92186729_final_v2`.
 
 ## Run sequence
 

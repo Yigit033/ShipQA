@@ -27,6 +27,11 @@ registration/outlier matrix retained 24/24 correct acceptance decisions and zero
 false positives in all six accepted controls. All 55 tests pass. See
 [COMPONENT_ROTATION.md](COMPONENT_ROTATION.md).
 
+Axis-envelope translation assumes an unrotated component. When qualified local
+rotation exceeds 0.1 degrees, ShipQA now nulls the legacy translation result and
+marks it `invalid_under_component_rotation`, preventing rotation from being
+reported as a manufacturing translation before the joint-pose phase.
+
 ## Current status update - multi-axis translation hardening
 
 The first implementation step for independent component X/Y/Z translation is

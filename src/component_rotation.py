@@ -29,6 +29,11 @@ def rotation_matrix_to_euler_xyz_degrees(rotation):
     return np.degrees([rx, ry, rz]).tolist()
 
 
+def rotation_angle_degrees(rotation):
+    value = float(np.clip((np.trace(rotation) - 1.0) * 0.5, -1.0, 1.0))
+    return float(np.degrees(np.arccos(value)))
+
+
 def estimate_component_rotation(scan_points, component, mesh_path):
     """Estimate nominal-to-observed local rigid pose without experiment metadata."""
     vertices, triangles = load_grouped_obj_component(mesh_path, component["part_ids"])
@@ -74,6 +79,7 @@ def estimate_component_rotation(scan_points, component, mesh_path):
         "transform_nominal_to_observed": nominal_to_observed.tolist(),
         "rotation_matrix_nominal_to_observed": rotation.tolist(),
         "estimated_rotation_xyz_deg": rotation_matrix_to_euler_xyz_degrees(rotation),
+        "estimated_rotation_angle_deg": rotation_angle_degrees(rotation),
         "estimated_center_translation_mm": (observed_center - center).tolist(),
         "observed_points_used": int(len(observed)),
         "nominal_points_used": int(len(nominal)),
