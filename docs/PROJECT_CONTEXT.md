@@ -1,5 +1,22 @@
 # ShipQA — Project Context
 
+## Current status update - local component rotation implementation
+
+The next hardening implementation is ready for Rhino validation. A sequential
+13-case batch rotates STF_03 independently around X, Y and Z about its nominal
+center. Small RX cases characterize the unchanged 5 mm detection gate; the other
+cases test detection, component identity and local rigid rotation recovery.
+
+The external engine now estimates a component-specific nominal-to-observed rigid
+transform with robust point-to-plane ICP against grouped nominal component faces.
+It reports the rotation matrix, signed XYZ Euler angles, center translation,
+fitness, RMSE and source hash without receiving ground truth or the expected axis.
+
+All 54 tests pass. A known synthetic local rotation is recovered within 0.1 degree.
+A pure Y=-8 mm translation cross-check produced only 0.01365 degrees apparent
+rotation. The Rhino rotation sweep has not yet been generated and no STF_03
+rotation accuracy claim is made. See [COMPONENT_ROTATION.md](COMPONENT_ROTATION.md).
+
 ## Current status update - multi-axis translation hardening
 
 The first implementation step for independent component X/Y/Z translation is

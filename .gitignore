@@ -18,6 +18,7 @@ data/distance_investigation/
 data/registration_validation/
 data/registration_robustness/
 data/validation/xyz_translation_*/
+data/validation/component_rotation_*/
 data/regression/**/interface_prediction/
 data/validation/**/cases/**/prediction/
 data/validation/**/summary.csv
