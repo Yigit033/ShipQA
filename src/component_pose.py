@@ -96,6 +96,34 @@ def select_component_region(scan_points, component, margin_mm=POSE_MARGIN_MM):
     return scan_points[mask]
 
 
+def component_translation_axis_support(vertices, triangles, observed_point_count):
+    """Report which translation axes have enough normal-facing surface evidence."""
+    tri = vertices[triangles]
+    cross = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
+    double_area = np.linalg.norm(cross, axis=1)
+    normals = np.divide(
+        cross, double_area[:, None], out=np.zeros_like(cross),
+        where=double_area[:, None] > 0.0)
+    total_area = float((double_area * 0.5).sum())
+    if not np.isfinite(total_area) or total_area <= 0.0:
+        raise ValueError("Component nominal mesh has no positive surface area")
+    axis_status = {}
+    for axis, name in enumerate("xyz"):
+        supported_area = float((double_area[
+            np.abs(normals[:, axis]) >= NORMAL_ALIGNMENT_MIN] * 0.5).sum())
+        area_fraction = supported_area / total_area
+        expected_points = float(observed_point_count * area_fraction)
+        observable = expected_points >= MIN_EXPECTED_AXIS_SUPPORT_POINTS
+        axis_status[name] = {
+            "status": "estimated" if observable else "insufficient_geometric_support",
+            "normal_aligned_surface_fraction": area_fraction,
+            "expected_support_points": expected_points,
+            "minimum_expected_support_points": MIN_EXPECTED_AXIS_SUPPORT_POINTS,
+            "normal_alignment_minimum": NORMAL_ALIGNMENT_MIN,
+        }
+    return axis_status
+
+
 def estimate_translation_xyz(scan_points, component, mesh_path,
                              legacy_y_shift_mm, legacy_component_points):
     """Estimate XYZ translation without knowing which axis was displaced.
@@ -119,30 +147,11 @@ def estimate_translation_xyz(scan_points, component, mesh_path,
     nominal_center = nominal_envelope.mean(axis=0)
     envelope_translation = observed_center - nominal_center
 
-    tri = vertices[triangles]
-    cross = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
-    double_area = np.linalg.norm(cross, axis=1)
-    normals = np.divide(
-        cross, double_area[:, None], out=np.zeros_like(cross),
-        where=double_area[:, None] > 0.0)
-    total_area = float((double_area * 0.5).sum())
-    axis_status = {}
+    axis_status = component_translation_axis_support(
+        vertices, triangles, len(observed))
     translation = [None, None, None]
-    axis_names = "xyz"
-    for axis in range(3):
-        supported_area = float((double_area[
-            np.abs(normals[:, axis]) >= NORMAL_ALIGNMENT_MIN] * 0.5).sum())
-        area_fraction = supported_area / total_area
-        expected_points = float(len(observed) * area_fraction)
-        observable = expected_points >= MIN_EXPECTED_AXIS_SUPPORT_POINTS
-        axis_status[axis_names[axis]] = {
-            "status": "estimated" if observable else "insufficient_geometric_support",
-            "normal_aligned_surface_fraction": area_fraction,
-            "expected_support_points": expected_points,
-            "minimum_expected_support_points": MIN_EXPECTED_AXIS_SUPPORT_POINTS,
-            "normal_alignment_minimum": NORMAL_ALIGNMENT_MIN,
-        }
-        if observable:
+    for axis, name in enumerate("xyz"):
+        if axis_status[name]["status"] == "estimated":
             translation[axis] = float(envelope_translation[axis])
 
     # Preserve the validated Y estimator byte-for-byte when Y is observable.

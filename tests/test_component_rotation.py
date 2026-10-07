@@ -83,6 +83,43 @@ f 2 3 4
         self.assertLess(validation.rotation_error_degrees(
             result["rotation_matrix_nominal_to_observed"], rotation), 0.1)
 
+    def test_combined_rotation_and_center_translation_are_recovered(self):
+        obj = """\
+g PART_A
+v 0 0 20
+v 100 0 20
+v 0 30 20
+v 0 0 70
+f 1 2 3
+f 1 2 4
+f 1 3 4
+f 2 3 4
+"""
+        component = {"part_ids": ["PART_A"],
+                     "bbox": {"min": [-100, -100, 0], "max": [200, 150, 100]},
+                     "nominal_center": [25, 7.5, 32.5]}
+        expected_angles = np.array([1.0, -0.6, 0.8])
+        expected_translation = np.array([4.0, -7.0, 3.0])
+        rotation = euler_matrix(expected_angles)
+        center = np.asarray(component["nominal_center"])
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "reference.obj"
+            path.write_text(obj)
+            vertices, triangles = component_pose.load_grouped_obj_component(
+                path, ["PART_A"])
+            nominal = component_pose.sample_triangle_mesh(
+                vertices, triangles, count=20000)
+            observed = ((nominal - center) @ rotation.T + center
+                        + expected_translation)
+            result = component_rotation.estimate_component_rotation(
+                observed, component, path)
+        self.assertEqual(result["status"], "estimated")
+        self.assertLess(validation.rotation_error_degrees(
+            result["rotation_matrix_nominal_to_observed"], rotation), 0.1)
+        np.testing.assert_allclose(
+            result["estimated_center_translation_xyz_mm"],
+            expected_translation, atol=0.1)
+
 
 class RotationScoringTests(unittest.TestCase):
     def test_angular_error_and_wrong_component(self):

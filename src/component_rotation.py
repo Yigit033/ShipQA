@@ -3,7 +3,8 @@
 import numpy as np
 import open3d as o3d
 
-from component_pose import (load_grouped_obj_component, sample_triangle_mesh,
+from component_pose import (component_translation_axis_support,
+                            load_grouped_obj_component, sample_triangle_mesh,
                             select_component_region)
 
 
@@ -66,6 +67,14 @@ def estimate_component_rotation(scan_points, component, mesh_path):
     rotation = nominal_to_observed[:3, :3]
     center = np.asarray(component["nominal_center"], dtype=np.float64)
     observed_center = rotation @ center + nominal_to_observed[:3, 3]
+    raw_center_translation = observed_center - center
+    axis_status = component_translation_axis_support(
+        vertices, triangles, len(observed))
+    qualified_translation = [
+        float(raw_center_translation[axis])
+        if axis_status[name]["status"] == "estimated" else None
+        for axis, name in enumerate("xyz")
+    ]
     final_stage = stages[-1]
     quality_checks = {
         "fitness_at_least_0_95": final_stage["fitness"] >= MIN_LOCAL_ROTATION_FITNESS,
@@ -80,7 +89,9 @@ def estimate_component_rotation(scan_points, component, mesh_path):
         "rotation_matrix_nominal_to_observed": rotation.tolist(),
         "estimated_rotation_xyz_deg": rotation_matrix_to_euler_xyz_degrees(rotation),
         "estimated_rotation_angle_deg": rotation_angle_degrees(rotation),
-        "estimated_center_translation_mm": (observed_center - center).tolist(),
+        "estimated_center_translation_mm": raw_center_translation.tolist(),
+        "estimated_center_translation_xyz_mm": qualified_translation,
+        "translation_axis_status": axis_status,
         "observed_points_used": int(len(observed)),
         "nominal_points_used": int(len(nominal)),
         "stages": stages,

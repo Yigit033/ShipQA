@@ -328,6 +328,7 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
         "estimated_shift_y_mm": None, "estimated_translation_xyz_mm": None,
         "component_pose": {"status": "not_estimated"},
         "component_rotation": {"status": "not_estimated"},
+        "joint_component_pose": {"status": "not_estimated"},
         "surface_p95_mm": float(np.percentile(distances, 95)),
         "surface_p99_mm": float(np.percentile(distances, 99)),
         "surface_min_mm": float(distances.min()), "surface_median_mm": float(np.median(distances)),
@@ -577,6 +578,36 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
             try:
                 result["component_rotation"] = estimate_component_rotation(
                     scan_points, closest_component, mesh_path)
+                local_pose = result["component_rotation"]
+                if local_pose.get("status") == "estimated":
+                    joint_translation = local_pose[
+                        "estimated_center_translation_xyz_mm"]
+                    joint_status = ("estimated" if all(
+                        value is not None for value in joint_translation)
+                        else "partial_estimate")
+                    result["joint_component_pose"] = {
+                        "status": joint_status,
+                        "method": local_pose["method"],
+                        "estimated_translation_xyz_mm": joint_translation,
+                        "raw_estimated_center_translation_xyz_mm": local_pose[
+                            "estimated_center_translation_mm"],
+                        "translation_axis_status": local_pose[
+                            "translation_axis_status"],
+                        "estimated_rotation_xyz_deg": local_pose[
+                            "estimated_rotation_xyz_deg"],
+                        "estimated_rotation_angle_deg": local_pose[
+                            "estimated_rotation_angle_deg"],
+                        "rotation_matrix_nominal_to_observed": local_pose[
+                            "rotation_matrix_nominal_to_observed"],
+                        "transform_nominal_to_observed": local_pose[
+                            "transform_nominal_to_observed"],
+                        "observed_points_used": local_pose["observed_points_used"],
+                        "nominal_points_used": local_pose["nominal_points_used"],
+                        "stages": local_pose["stages"],
+                        "quality_status": local_pose["quality_status"],
+                        "quality_checks": local_pose["quality_checks"],
+                        "quality_thresholds": local_pose["quality_thresholds"],
+                    }
                 if (result["component_rotation"].get("status") == "estimated"
                         and result["component_rotation"]["estimated_rotation_angle_deg"]
                         > MAX_TRANSLATION_ONLY_ROTATION_DEG):
@@ -585,10 +616,15 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
                         "Axis-envelope translation assumes an unrotated component")
                     result["component_pose"]["maximum_translation_only_rotation_deg"] = (
                         MAX_TRANSLATION_ONLY_ROTATION_DEG)
-                    result["estimated_translation_xyz_mm"] = None
-                    result["estimated_shift_y_mm"] = None
+                    result["estimated_translation_xyz_mm"] = joint_translation
+                    result["estimated_shift_y_mm"] = joint_translation[1]
+                    result["observed_center_y_mm"] = (
+                        nominal_center_y + joint_translation[1]
+                        if joint_translation[1] is not None else None)
             except ValueError as error:
                 result["component_rotation"] = {
+                    "status": "unsupported_reference", "reason": str(error)}
+                result["joint_component_pose"] = {
                     "status": "unsupported_reference", "reason": str(error)}
 
     return result
@@ -617,6 +653,7 @@ def run_prediction(scan_path, mesh_path, manifest_path, output_dir, registration
                           "detected_component": None, "estimated_shift_y_mm": None,
                           "estimated_translation_xyz_mm": None,
                           "component_rotation": {"status": "not_estimated"},
+                          "joint_component_pose": {"status": "not_estimated"},
                           "points_used": None}
     with (output_dir / "prediction.json").open("x", encoding="utf-8") as stream:
         json.dump(result, stream, indent=2, allow_nan=False)
