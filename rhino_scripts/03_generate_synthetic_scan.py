@@ -83,6 +83,7 @@ def generate_synthetic_scan(asbuilt_ids=None, save_path=None, seed=RANDOM_SEED,
 
     known_shift_mm = None
     known_shift_xyz_mm = None
+    known_rotation_xyz_deg = None
 
     for obj_id in asbuilt_ids:
         # Ground truth for reporting only; sampling uses the geometry below.
@@ -101,6 +102,15 @@ def generate_synthetic_scan(asbuilt_ids=None, save_path=None, seed=RANDOM_SEED,
                         value = None
                     values.append(float(value) if value not in (None, "") else 0.0)
                 known_shift_xyz_mm = values
+                rotations = []
+                for key in ("KNOWN_ROTATION_X_DEG", "KNOWN_ROTATION_Y_DEG",
+                            "KNOWN_ROTATION_Z_DEG"):
+                    try:
+                        value = rs.GetUserText(obj_id, key)
+                    except:
+                        value = None
+                    rotations.append(float(value) if value not in (None, "") else 0.0)
+                known_rotation_xyz_deg = rotations
                 break
             except:
                 pass
@@ -307,9 +317,11 @@ def generate_synthetic_scan(asbuilt_ids=None, save_path=None, seed=RANDOM_SEED,
                         cloud_id,
                         "KNOWN_DEFECT",
                         ("STF_03 XYZ TRANSLATION "
-                         "[{:+.3f}, {:+.3f}, {:+.3f}] mm").format(
+                         "[{:+.3f}, {:+.3f}, {:+.3f}] mm; ROTATION "
+                         "[{:+.3f}, {:+.3f}, {:+.3f}] deg").format(
                              known_shift_xyz_mm[0], known_shift_xyz_mm[1],
-                             known_shift_xyz_mm[2])
+                             known_shift_xyz_mm[2], known_rotation_xyz_deg[0],
+                             known_rotation_xyz_deg[1], known_rotation_xyz_deg[2])
                     )
 
 
@@ -364,6 +376,9 @@ def generate_synthetic_scan(asbuilt_ids=None, save_path=None, seed=RANDOM_SEED,
                 print("STF_03 XYZ = [{:+.3f}, {:+.3f}, {:+.3f}] mm".format(
                     known_shift_xyz_mm[0], known_shift_xyz_mm[1],
                     known_shift_xyz_mm[2]))
+                print("STF_03 RXYZ = [{:+.3f}, {:+.3f}, {:+.3f}] deg".format(
+                    known_rotation_xyz_deg[0], known_rotation_xyz_deg[1],
+                    known_rotation_xyz_deg[2]))
             print("--------------------------------------")
 
             triangle_coordinates = [[[p.X, p.Y, p.Z] for p in tri] for tri in triangles]
@@ -372,7 +387,8 @@ def generate_synthetic_scan(asbuilt_ids=None, save_path=None, seed=RANDOM_SEED,
                     "seed": seed, "triangle_count": len(triangles),
                     "surface_area_mm2": total_area, "sampling_triangles_sha256": triangle_hash,
                     "part_order": [rs.GetUserText(obj, "PART_ID") for obj in asbuilt_ids],
-                    "reported_known_translation_xyz_mm": known_shift_xyz_mm}
+                    "reported_known_translation_xyz_mm": known_shift_xyz_mm,
+                    "reported_known_rotation_xyz_deg": known_rotation_xyz_deg}
 
 
 if __name__ == "__main__":
