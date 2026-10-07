@@ -14,10 +14,23 @@ zero control plus -16, -8, +8 and +16 mm cases independently on each axis. The
 external evaluator predicts every case before reading any ground truth and reports
 axis errors, vector errors and complete failure denominators.
 
-All 48 implementation and regression tests pass. The preserved STF_03 -8 mm Y
-result remains -8.126176 mm. The Rhino XYZ scans have not yet been generated, so
-no X/Z detection or accuracy result is claimed. See
+The implementation was prepared without changing the preserved STF_03 -8 mm Y
+result of -8.126176 mm. See
 [MULTI_AXIS_TRANSLATION.md](MULTI_AXIS_TRANSLATION.md).
+
+The Rhino sweep subsequently completed on 2026-10-07. It proved that longitudinal
+X motion of the 4000 mm prismatic stiffener is not observable with the current
+surface sampling: only 2--8 endpoint points crossed the 5 mm gate, while at least
+10 supported points are required. The engine now returns a null X value with
+`insufficient_geometric_support` instead of a confident false displacement.
+
+All four Y and all four Z cases were detected and correctly identified as STF_03.
+Y bias/MAE/max error are 0.382362/0.382362/0.382362 mm. Z
+bias/MAE/max error are 0.371843/0.371843/0.381892 mm. The zero control remains free
+of false positives and there were no execution failures. The earlier negative-Z
+error was caused by fixed low-Z cropping; Z now uses the observable upper component
+surface. Full-vector metrics remain null whenever one axis lacks geometric support.
+All 49 tests pass and the preserved -8.126176 mm historical regression is unchanged.
 
 ## Current status update - registration robustness and QA gating
 

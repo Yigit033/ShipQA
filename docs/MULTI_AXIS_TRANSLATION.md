@@ -56,8 +56,44 @@ component identification and pose estimation with complete denominators.
 
 ## Current evidence
 
-Implementation tests pass 48/48, including the preserved -8.126176 mm regression,
+Implementation tests initially passed 48/48, including the preserved -8.126176 mm regression,
 ground-truth isolation, XYZ scoring, explicit failure denominators, IronPython 2.7
 grammar and a known component-surface translation recovery test.
 
-The Rhino XYZ batch has not yet been generated. No X/Z accuracy claim is made.
+## Completed sweep - 2026-10-07
+
+Rhino generated all 13 scans in
+`xyz_translation_20261007T141807Z_e1b7d7f9`. The first run exposed two unsafe
+behaviours: an unobservable X estimate appeared as a false -9 to -12 mm offset,
+and fixed low-Z cropping caused 8 to 13 mm errors for negative Z translations.
+
+The corrected estimator now uses nominal face normals and surface area to estimate
+the number of scan points supporting each translation axis. An axis requires at
+least 10 expected supporting points on faces whose absolute normal component is at
+least 0.95. This is geometric evidence rather than an inferred case label or a
+ground-truth-dependent confidence score.
+
+For STF_03, X-normal faces are only 0.2012% of the component surface and provide an
+expected 3.85 points in a typical 1,915-point component selection. X is therefore
+reported as `null` with `insufficient_geometric_support`. Y and Z have approximately
+1,233 and 678 expected supporting points respectively.
+
+The final 13-case result is:
+
+- zero-control false positives: 0/1
+- Y detection / correct identification / valid estimate: 4/4, 4/4, 4/4
+- Y bias / MAE / maximum error: 0.382362 / 0.382362 / 0.382362 mm
+- Z detection / correct identification / valid estimate: 4/4, 4/4, 4/4
+- Z bias / MAE / maximum error: 0.371843 / 0.371843 / 0.381892 mm
+- X detection and estimate: 0/4; all four cases had only 2--8 raw endpoint
+  candidates and no supported cluster
+- execution failures: 0
+
+Z is measured from the upper component-surface percentile, which remains visible
+when the lower region intersects or is obscured by the plate. The validated legacy
+Y result remains unchanged. Full XYZ vector error is deliberately not reported
+when any axis is unobservable.
+
+The final preserved analysis is
+`xyz_translation_20261007T141807Z_e1b7d7f9_axis_reliability_final_v2`. All 49 tests
+pass. Rotation hardening has not started.

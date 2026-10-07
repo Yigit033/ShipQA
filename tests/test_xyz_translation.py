@@ -126,6 +126,19 @@ class XYZScoringTests(unittest.TestCase):
         self.assertEqual(report["estimation"]["valid_estimates"], 1)
         self.assertEqual(len(report["estimation"]["excluded_cases"]), 2)
 
+    def test_unobservable_axis_is_null_and_not_scored(self):
+        row = validation.evaluate_case(
+            "case_001", self.prediction([None, 0.2, -0.1]),
+            self.truth([8, 0, 0]))
+        self.assertEqual(row["outcome"], "missing_xyz_estimate")
+        self.assertIsNone(row["predicted_x_mm"])
+        self.assertIsNone(row["signed_error_x_mm"])
+        self.assertFalse(row["valid_estimate"])
+        report = validation.aggregate_results([row])
+        self.assertEqual(report["estimation"]["x"]["expected_axis_cases"], 1)
+        self.assertEqual(report["estimation"]["x"]["valid_axis_estimates"], 0)
+        self.assertIsNone(report["estimation"]["x"]["mae_mm"])
+
     def test_predictions_finish_before_truth_is_read(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
