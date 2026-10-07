@@ -1,5 +1,27 @@
 # ShipQA — Project Context
 
+## Current status update - combined component rigid pose
+
+The next controlled hardening stage is implemented and ready for Rhino generation.
+ShipQA now derives component center translation and signed XYZ rotation from the
+same quality-gated local rigid transform. Unsupported translation axes remain null;
+for the current long STF_03 geometry, X remains unobservable while Y and Z have
+surface-normal support. When rotation exceeds 0.1 degrees, the engine now publishes
+this joint-pose translation instead of the invalid legacy axis-envelope result.
+
+The new sequential eleven-case Rhino batch combines Y/Z translations with
+single-axis and multi-axis rotations, includes a zero control, and contains two
+explicit X-observability characterization cases. Every case is rebuilt from nominal
+geometry. The external evaluator completes all predictions before reading ground
+truth and reports all denominators.
+
+The preserved historical -8 mm result remains -8.126176 mm. On the newer grouped
+-8 mm fixture, the local rigid transform estimates Y as -7.986415 mm with only
+0.006572 degrees of residual rotation. Existing pure-rotation STF_03 fixtures keep
+inferred Y/Z center translation below 0.015 mm. All 62 tests pass. The new combined
+sweep has not yet run in Rhino, so range qualification is still pending. See
+[COMBINED_COMPONENT_POSE.md](COMBINED_COMPONENT_POSE.md).
+
 ## Current status update - local component rotation implementation
 
 The next hardening implementation is ready for Rhino validation. A sequential

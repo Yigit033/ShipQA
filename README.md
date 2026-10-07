@@ -4,15 +4,16 @@ ShipQA is an engineering prototype for dimensional quality assurance of ship
 structures. It compares nominal CAD geometry with an as-built point cloud and
 turns geometric differences into traceable component-level findings.
 
-The current validated question is intentionally narrow:
+The currently validated product question is intentionally narrow:
 
-> Can the system align a scanned stiffened panel to nominal CAD, identify the
-> displaced stiffener, and independently estimate its transverse displacement?
+> Can the system align a scanned stiffened panel to nominal CAD, identify an
+> incorrectly positioned stiffener, and independently estimate its rigid pose?
 
 For the controlled STF_03 experiments, the answer is yes across positive and
 negative Y translations, several global scan poses, partial coverage with survey
-control, and isolated environmental outliers. This is not yet a claim of general
-shipyard or full-vessel readiness.
+control, isolated environmental outliers, and local component rotations. The joint
+translation-plus-rotation range sweep is ready for Rhino validation. This is not
+yet a claim of general shipyard or full-vessel readiness.
 
 ## What works today
 
@@ -26,6 +27,8 @@ shipyard or full-vessel readiness.
 - registration quality gating before component QA
 - isolated-point filtering and spatial support for defect candidates
 - component identification and Y-displacement estimation
+- quality-gated local component rotation estimation
+- joint component translation and rotation from one local rigid transform
 - immutable ground-truth validation runs and structured JSON/CSV output
 
 Current controlled results include:
@@ -35,11 +38,12 @@ Current controlled results include:
 - registration acceptance behaviour correct in 24 out of 24 robustness cases,
 - twelve out of twelve detectable robustness cases correctly identified,
 - unsafe partial or badly oriented registrations rejected before QA,
-- forty automated tests passing.
+- sixty-two automated tests passing.
 
 See [registration robustness](docs/REGISTRATION_ROBUSTNESS.md),
 [surface-distance investigation](docs/SURFACE_DISTANCE_INVESTIGATION.md), and
-[validation harness](docs/VALIDATION_HARNESS.md) for evidence and limitations.
+[combined component pose](docs/COMBINED_COMPONENT_POSE.md) for evidence and
+limitations.
 
 ## Engineering pipeline
 
@@ -68,6 +72,9 @@ As-built scan / point cloud
               |
               v
  component displacement estimation
+              |
+              v
+ joint translation + rotation estimation
 ```
 
 Nominal geometry, as-built geometry, scan data, surface deviation, and component
@@ -198,6 +205,9 @@ Run Rhino scripts through `RunPythonScript`:
 sweep. Every case rebuilds from nominal geometry and keeps its own scan and ground
 truth.
 
+`09_generate_combined_pose_validation_batch.py` generates the controlled joint
+translation-plus-rotation sweep. It also rebuilds every case from nominal geometry.
+
 ## Validation commands
 
 Evaluate a completed Rhino Y sweep:
@@ -219,6 +229,13 @@ Generate and evaluate the focused registration robustness matrix:
 
 All predictions complete before validation code reads ground truth.
 
+Evaluate a completed Rhino combined-pose sweep:
+
+```powershell
+.\.venv\Scripts\python.exe -B src\validate_combined_poses.py `
+  <combined-pose-run-directory> --output-dir <new-analysis-directory>
+```
+
 ## Current limits
 
 ShipQA has not yet been qualified for real yard scans. Important remaining work
@@ -229,7 +246,7 @@ includes:
 - occlusion and varying scan density,
 - multi-station scan registration,
 - survey-network and scanner systematic errors,
-- controlled rotation, deformation, missing components, and multiple defects,
+- combined-pose range qualification, deformation, missing components, and multiple defects,
 - validation on real point-cloud data.
 
 Registration thresholds currently reflect the controlled 0.35 mm-noise prototype;
