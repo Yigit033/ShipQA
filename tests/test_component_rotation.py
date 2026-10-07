@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 import component_pose
 import component_rotation
+import qa_engine
 import validate_component_rotations as validation
 
 
@@ -27,6 +28,14 @@ def euler_matrix(values):
 
 
 class RotationPrimitiveTests(unittest.TestCase):
+    def test_component_aligned_support_accepts_longitudinal_evidence(self):
+        component = {"bbox": {"min": [0, 1160, 12], "max": [4000, 1240, 172]}}
+        points = np.array([[x, 1200, 170] for x in np.linspace(0, 4000, 51)])
+        supported, clusters = qa_engine.component_aligned_candidate_support(
+            points, [component])
+        self.assertEqual(int(supported.sum()), len(points))
+        self.assertEqual(clusters, 1)
+
     def test_euler_round_trip_and_sign_convention(self):
         expected = [1.2, -0.8, 1.5]
         actual = component_rotation.rotation_matrix_to_euler_xyz_degrees(
@@ -67,7 +76,8 @@ f 2 3 4
             observed = (nominal - center) @ rotation.T + center
             result = component_rotation.estimate_component_rotation(
                 observed, component, path)
-        self.assertEqual(result["status"], "estimated_provisional")
+        self.assertEqual(result["status"], "estimated")
+        self.assertEqual(result["quality_status"], "pass_controlled")
         self.assertLess(validation.rotation_error_degrees(
             result["rotation_matrix_nominal_to_observed"], rotation), 0.1)
 
@@ -81,7 +91,7 @@ class RotationScoringTests(unittest.TestCase):
         prediction = {"status": "estimated", "candidate_count": 100,
                       "detected_component": "STF_03", "surface_p95_mm": 1,
                       "surface_p99_mm": 7,
-                      "component_rotation": {"status": "estimated_provisional",
+                      "component_rotation": {"status": "estimated",
                           "rotation_matrix_nominal_to_observed": euler_matrix([0, 0.8, 0]).tolist(),
                           "estimated_rotation_xyz_deg": [0, 0.8, 0],
                           "observed_points_used": 1000,

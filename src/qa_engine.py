@@ -25,6 +25,7 @@ DATA_DIR = PROJECT_ROOT / "data"
 DEFECT_THRESHOLD_MM = 5.0
 DEFECT_CLUSTER_RADIUS_MM = 100.0
 MIN_DEFECT_CLUSTER_POINTS = 10
+LONGITUDINAL_SUPPORT_SCALE = 0.20
 MIN_REGISTRATION_FINE_FITNESS = 0.85
 MAX_REGISTRATION_SURFACE_P95_MM = 2.0
 MIN_REGISTRATION_RETAINED_FRACTION = 0.75
@@ -36,6 +37,31 @@ MANIFEST_PATH = DATA_DIR / "component_manifest.json"
 
 def file_hash(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def component_aligned_candidate_support(raw_points, components):
+    """Support distributed evidence along a manifest component's longest axis."""
+    supported = np.zeros(len(raw_points), dtype=bool)
+    cluster_count = 0
+    for component in components:
+        low = np.asarray(component["bbox"]["min"], dtype=np.float64)
+        high = np.asarray(component["bbox"]["max"], dtype=np.float64)
+        margin = np.array([50.0, 50.0, 50.0])
+        region = np.all((raw_points >= low - margin) & (raw_points <= high + margin), axis=1)
+        indices = np.flatnonzero(region)
+        if len(indices) < MIN_DEFECT_CLUSTER_POINTS:
+            continue
+        scaled = raw_points[indices].copy()
+        longest_axis = int(np.argmax(high - low))
+        scaled[:, longest_axis] *= LONGITUDINAL_SUPPORT_SCALE
+        cloud = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(scaled))
+        labels = np.asarray(cloud.cluster_dbscan(
+            eps=DEFECT_CLUSTER_RADIUS_MM,
+            min_points=MIN_DEFECT_CLUSTER_POINTS, print_progress=False))
+        accepted = labels >= 0
+        supported[indices[accepted]] = True
+        cluster_count += len(set(labels[accepted].tolist()))
+    return supported, cluster_count
 
 
 def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFEST_PATH,
@@ -238,6 +264,16 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
 
     print("========================================\n")
 
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Component manifest not found: {manifest_path}")
+    with open(manifest_path, "r") as f:
+        manifest = json.load(f)
+    if manifest.get("units") != "mm":
+        raise ValueError("Component manifest units must be mm.")
+    components = manifest["components"]
+    if not components:
+        raise ValueError("Component manifest is empty.")
+
     # ---------------------------------------------------------
     # LOCALIZE LARGE DEVIATIONS
     # ---------------------------------------------------------
@@ -245,6 +281,7 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
     defect_mask = distances > DEFECT_THRESHOLD_MM
     raw_defect_points = scan_points[defect_mask]
     raw_defect_distances = distances[defect_mask]
+    candidate_support_method = "isotropic_dbscan"
     if len(raw_defect_points) > 0:
         candidate_cloud = o3d.geometry.PointCloud(
             o3d.utility.Vector3dVector(raw_defect_points))
@@ -257,6 +294,13 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
         defect_points = raw_defect_points[supported_mask]
         defect_distances = raw_defect_distances[supported_mask]
         defect_cluster_count = len(set(cluster_labels[supported_mask].tolist()))
+        if len(defect_points) == 0 and len(raw_defect_points) >= MIN_DEFECT_CLUSTER_POINTS:
+            supported_mask, defect_cluster_count = component_aligned_candidate_support(
+                raw_defect_points, components)
+            defect_points = raw_defect_points[supported_mask]
+            defect_distances = raw_defect_distances[supported_mask]
+            if len(defect_points) > 0:
+                candidate_support_method = "component_aligned_anisotropic_dbscan"
     else:
         defect_points = raw_defect_points
         defect_distances = raw_defect_distances
@@ -275,6 +319,8 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
         "rejected_sparse_candidate_count": len(raw_defect_points) - len(defect_points),
         "defect_cluster_radius_mm": DEFECT_CLUSTER_RADIUS_MM,
         "minimum_defect_cluster_points": MIN_DEFECT_CLUSTER_POINTS,
+        "candidate_support_method": candidate_support_method,
+        "longitudinal_support_scale": LONGITUDINAL_SUPPORT_SCALE,
         "defect_cluster_count": defect_cluster_count,
         "detected_component": None,
         "points_used": 0, "nominal_center_y_mm": None, "observed_center_y_mm": None,
@@ -356,20 +402,6 @@ def analyze_scan(scan_path=SCAN_PATH, mesh_path=MESH_PATH, manifest_path=MANIFES
     # ---------------------------------------------------------
     # MAP DEFECT REGION TO ENGINEERING COMPONENT
     # ---------------------------------------------------------
-
-    if not manifest_path.exists():
-        raise FileNotFoundError(
-            f"Component manifest not found: {manifest_path}"
-        )
-
-    with open(manifest_path, "r") as f:
-        manifest = json.load(f)
-
-    if manifest.get("units") != "mm":
-        raise ValueError("Component manifest units must be mm.")
-    components = manifest["components"]
-    if not components:
-        raise ValueError("Component manifest is empty.")
 
     if len(defect_points) == 0:
         # A detector outcome, not a fabricated zero displacement or a runtime failure.

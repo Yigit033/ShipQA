@@ -42,7 +42,7 @@ def evaluate_case(case_id, prediction, truth):
     valid_rotation = False
     angular_error = None
     axis_errors = [None, None, None]
-    if correct is True and local.get("status") == "estimated_provisional":
+    if correct is True and local.get("status") == "estimated":
         try:
             matrix = np.asarray(predicted_matrix, dtype=np.float64)
             euler = np.asarray(predicted_euler, dtype=np.float64)
